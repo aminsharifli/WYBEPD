@@ -2,7 +2,7 @@ import React, { forwardRef } from 'react'
 import RiceBadge from './RiceBadge'
 import { ORG, STATUS_STYLES } from '../constants'
 
-const GOLD = '#c9a24b'
+const GOLD = '#1680ff'
 
 function InfoCell({ label, value }) {
   return (
@@ -262,3 +262,4 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
 })
 
 export default DocumentPreview
+

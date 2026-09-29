@@ -20,7 +20,7 @@ function Card({ icon: Icon, title, children }) {
   return (
     <section className="rounded-lg border border-slate-800 bg-[#0d1626] p-4">
       <header className="mb-4 flex items-center gap-2">
-        <Icon className="h-4 w-4 text-[#c9a24b]" />
+        <Icon className="h-4 w-4 text-[#1680ff]" />
         <h2 className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-200">{title}</h2>
       </header>
       <div className="space-y-3">{children}</div>
@@ -50,11 +50,11 @@ export default function FormPanel({
 
   return (
     <div className="flex flex-col gap-4">
-      <button onClick={onNewFile} disabled={busy || saving} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-slate-200 transition hover:border-[#c9a24b]/60 hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60">
-        <FilePlus2 className="h-4 w-4 text-[#c9a24b]" /> Yeni Dosya
+      <button onClick={onNewFile} disabled={busy || saving} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-slate-200 transition hover:border-[#1680ff]/60 hover:bg-slate-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-60">
+        <FilePlus2 className="h-4 w-4 text-[#1680ff]" /> Yeni Dosya
       </button>
       <div className="grid gap-2 sm:grid-cols-2">
-        <button onClick={onDownload} disabled={busy || saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#c9a24b] px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-[#0a0f1a] shadow-lg shadow-[#c9a24b]/10 transition hover:bg-[#dbb463] disabled:cursor-not-allowed disabled:opacity-60">
+        <button onClick={onDownload} disabled={busy || saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1680ff] px-4 py-3 text-sm font-bold uppercase tracking-[0.1em] text-[#0a0f1a] shadow-lg shadow-[#1680ff]/10 transition hover:bg-[#dbb463] disabled:cursor-not-allowed disabled:opacity-60">
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
           {busy ? 'Hazırlanıyor…' : 'PNG İNDİR & KAYDET'}
         </button>
@@ -64,7 +64,7 @@ export default function FormPanel({
         </button>
       </div>
       <label className="-mt-1 flex cursor-pointer items-center gap-2 text-xs text-slate-400">
-        <input type="checkbox" checked={clearAfterSave} onChange={(event) => setClearAfterSave(event.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-[#c9a24b] focus:ring-[#c9a24b]/30" />
+        <input type="checkbox" checked={clearAfterSave} onChange={(event) => setClearAfterSave(event.target.checked)} className="h-4 w-4 rounded border-slate-600 bg-slate-900 text-[#1680ff] focus:ring-[#1680ff]/30" />
         Kaydedince formu temizle ve yeni dosya aç
       </label>
 
@@ -177,12 +177,12 @@ export default function FormPanel({
           }}
           onClick={() => fileRef.current?.click()}
           className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 py-8 text-center transition ${
-            dragOver ? 'border-[#c9a24b] bg-[#c9a24b]/10' : 'border-slate-700 hover:border-slate-500'
+            dragOver ? 'border-[#1680ff] bg-[#1680ff]/10' : 'border-slate-700 hover:border-slate-500'
           }`}
         >
           <Upload className="h-6 w-6 text-slate-400" />
           <p className="text-sm text-slate-300">
-            Görselleri buraya sürükleyin veya <span className="text-[#c9a24b]">seçin</span>
+            Görselleri buraya sürükleyin veya <span className="text-[#1680ff]">seçin</span>
           </p>
           <p className="text-[11px] text-slate-500">Sabıka fotoğrafı · olay yeri · kanıt görüntüleri — PNG / JPG</p>
           <input
@@ -244,3 +244,4 @@ export default function FormPanel({
     </div>
   )
 }
+

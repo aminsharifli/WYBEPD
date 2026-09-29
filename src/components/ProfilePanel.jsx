@@ -92,7 +92,7 @@ export default function ProfilePanel({ users, currentUser, profileUserId, profil
   }
 
   return <main className="mx-auto max-w-[1120px] px-4 py-7 sm:px-6">
-    <div className="mb-6"><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#c9a24b]">LSPD · PERSONEL</p><h2 className="mt-1 text-2xl font-bold text-white">Profil</h2></div>
+    <div className="mb-6"><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1680ff]">LSPD · PERSONEL</p><h2 className="mt-1 text-2xl font-bold text-white">Profil</h2></div>
     <section className="relative mb-6 overflow-hidden rounded-3xl border border-slate-700/80 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#1c3760] via-[#101b2e] to-[#0a111e] p-6 shadow-2xl shadow-black/20 sm:p-9">
       <div className="pointer-events-none absolute -right-8 -top-24 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl" /><div className="pointer-events-none absolute bottom-0 left-0 h-px w-full bg-gradient-to-r from-transparent via-sky-300/30 to-transparent" />
       <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
@@ -128,3 +128,4 @@ export default function ProfilePanel({ users, currentUser, profileUserId, profil
     </section>
   </main>
 }
+

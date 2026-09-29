@@ -1,23 +1,47 @@
 import { useEffect, useState } from 'react'
-import { Archive, ArrowDown, ArrowRight, FilePlus2, ShieldCheck, Users } from 'lucide-react'
-import RiceBadge from './RiceBadge'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 import { listSlides } from '../lib/sliderApi'
 
+const fallbackSlide = { id: 'welcome', photo: '' }
+
 export default function HomeScreen({ onNavigate }) {
-  const [slides, setSlides] = useState([])
+  const [slides, setSlides] = useState([fallbackSlide])
   const [active, setActive] = useState(0)
-  useEffect(() => { let live = true; listSlides().then((data) => { if (live) setSlides(Array.isArray(data) ? data.filter((item) => item.photo) : []) }).catch(() => {}); return () => { live = false } }, [])
-  useEffect(() => { if (slides.length < 2) return undefined; const timer = setInterval(() => setActive((index) => (index + 1) % slides.length), 6000); return () => clearInterval(timer) }, [slides.length])
-  return <main className="mx-auto max-w-[1600px] px-4 pb-12 pt-5 sm:px-6 lg:pt-8">
-    <section className="relative isolate min-h-[500px] overflow-hidden rounded-[28px] border border-white/10 bg-[#0d1626] shadow-2xl shadow-black/40 sm:min-h-[570px]">
-      {slides.map((slide, index) => <img key={slide.id} src={slide.photo} alt="LSPD ana sayfa görseli" className={`absolute inset-0 -z-20 h-full w-full object-cover transition-opacity duration-1000 ${index === active ? 'opacity-100' : 'opacity-0'}`} />)}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#07101e] via-[#07101e]/85 to-[#07101e]/25" /><div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#07101e]/90 via-transparent to-[#07101e]/10" />
-      <div className="flex min-h-[500px] flex-col justify-between p-6 sm:min-h-[570px] sm:p-10 lg:p-14">
-        <header className="flex items-center gap-3"><RiceBadge className="h-12 w-12 rounded-xl bg-slate-950/50 p-1 ring-1 ring-white/15 sm:h-14 sm:w-14" /><div><p className="text-xs font-bold uppercase tracking-[0.3em] text-[#f0cf7a]">Los Santos</p><p className="mt-1 text-sm font-semibold text-white">Police Department</p></div><span className="ml-auto inline-flex items-center gap-2 rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200"><span className="h-1.5 w-1.5 rounded-full bg-emerald-300" /> WYBE-LSPD · Aktif</span></header>
-        <div className="max-w-2xl py-10"><p className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#e6c36f]/25 bg-[#e6c36f]/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.2em] text-[#f0cf7a]"><ShieldCheck className="h-3.5 w-3.5" /> Personel Yönetim Sistemi</p><h1 className="text-5xl font-black tracking-tight text-white sm:text-6xl lg:text-7xl">WYBE-LSPD<span className="text-[#e6c36f]">.</span></h1><p className="mt-4 max-w-xl text-base leading-7 text-slate-200 sm:text-lg">Personel bilgileri, operasyon dosyaları ve departman kayıtları tek merkezde.</p><div className="mt-8 flex flex-wrap gap-3"><button onClick={() => onNavigate('create')} className="group inline-flex items-center gap-2 rounded-xl bg-[#e6c36f] px-5 py-3 text-sm font-bold text-[#101725] shadow-lg shadow-[#e6c36f]/15 transition hover:-translate-y-0.5 hover:bg-[#f2d98f]"><FilePlus2 className="h-4 w-4" /> Dosya oluştur <ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" /></button><button onClick={() => onNavigate('schema')} className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-5 py-3 text-sm font-semibold text-white backdrop-blur transition hover:bg-white/10"><Users className="h-4 w-4" /> Personel şeması</button></div></div>
-        <footer className="flex items-end justify-between gap-4"><p className="text-xs text-slate-400">Resmî departman personel portalı</p>{slides.length > 1 && <div className="flex gap-2" aria-label="Slider görseli seçin">{slides.map((slide, index) => <button key={slide.id} onClick={() => setActive(index)} aria-label={`${index + 1}. görsel`} className={`h-1.5 rounded-full transition-all ${index === active ? 'w-8 bg-[#e6c36f]' : 'w-3 bg-white/50 hover:bg-white'}`} />)}</div>}</footer>
+
+  useEffect(() => {
+    let live = true
+    listSlides().then((data) => {
+      if (!live) return
+      const images = Array.isArray(data) ? data.filter((item) => item.photo) : []
+      setSlides(images.length ? images : [fallbackSlide])
+      setActive(0)
+    }).catch(() => {})
+    return () => { live = false }
+  }, [])
+
+  useEffect(() => {
+    if (slides.length < 2) return undefined
+    const timer = setInterval(() => setActive((index) => (index + 1) % slides.length), 6500)
+    return () => clearInterval(timer)
+  }, [slides.length])
+
+  const change = (step) => setActive((index) => (index + step + slides.length) % slides.length)
+  const photo = slides[active]?.photo
+
+  return <main className="home-page">
+    <section className="home-hero" style={photo ? { backgroundImage: `linear-gradient(90deg,rgba(3,10,22,.9) 0%,rgba(3,10,22,.64) 43%,rgba(3,10,22,.16) 100%),linear-gradient(0deg,rgba(3,10,22,.72),transparent 45%),url("${photo}")` } : undefined}>
+      <div className="home-hero-glow" />
+      <div className="hero-content" key={active}>
+        <p className="hero-eyebrow">LOS SANTOS POLICE DEPARTMENT</p>
+        <h1>WYBE - <span className="text-blue-500">LSPD</span></h1>
+        <p className="hero-copy">Los Santos'un güvenliği için.<br />Her zaman hizmetinizdeyiz.</p>
+        <button className="hero-action" onClick={() => onNavigate('schema')}>Hakkımızda<ArrowRight /></button>
       </div>
+      {slides.length > 1 && <>
+        <button className="hero-arrow hero-arrow-left" onClick={() => change(-1)} aria-label="Önceki slayt"><ArrowLeft /></button>
+        <button className="hero-arrow hero-arrow-right" onClick={() => change(1)} aria-label="Sonraki slayt"><ArrowRight /></button>
+        <div className="hero-dots" aria-label="Slayt seçimi">{slides.map((slide, index) => <button key={slide.id ?? index} onClick={() => setActive(index)} aria-label={`${index + 1}. slayt`} aria-current={active === index ? 'true' : undefined} className={active === index ? 'active' : ''} />)}</div>
+      </>}
     </section>
-    <section className="mt-6 grid gap-4 md:grid-cols-3"><button onClick={() => onNavigate('archive')} className="group flex items-center gap-4 rounded-2xl border border-slate-800 bg-[#0d1626] p-5 text-left transition hover:-translate-y-0.5 hover:border-sky-400/40"><div className="grid h-12 w-12 place-items-center rounded-xl bg-sky-400/10 text-sky-300"><Archive className="h-5 w-5" /></div><div className="flex-1"><p className="font-bold text-white">Dosya arşivi</p><p className="mt-1 text-xs text-slate-500">Kaydedilmiş kayıtları inceleyin</p></div><ArrowRight className="h-4 w-4 text-slate-600 transition group-hover:translate-x-1 group-hover:text-sky-300" /></button><button onClick={() => onNavigate('schema')} className="group flex items-center gap-4 rounded-2xl border border-slate-800 bg-[#0d1626] p-5 text-left transition hover:-translate-y-0.5 hover:border-emerald-400/40"><div className="grid h-12 w-12 place-items-center rounded-xl bg-emerald-400/10 text-emerald-300"><Users className="h-5 w-5" /></div><div className="flex-1"><p className="font-bold text-white">Personel şeması</p><p className="mt-1 text-xs text-slate-500">Rütbe ve birimleri görüntüleyin</p></div><ArrowRight className="h-4 w-4 text-slate-600 transition group-hover:translate-x-1 group-hover:text-emerald-300" /></button><div className="flex items-center gap-4 rounded-2xl border border-slate-800 bg-gradient-to-br from-[#17233a] to-[#0d1626] p-5"><div className="grid h-12 w-12 place-items-center rounded-xl bg-amber-300/10 text-amber-200"><ArrowDown className="h-5 w-5" /></div><div><p className="font-bold text-white">Göreve hazır</p><p className="mt-1 text-xs text-slate-500">Güncel bilgiler, güvenli kayıtlar</p></div></div></section>
   </main>
 }
