@@ -1,48 +1,46 @@
-const SCHEMA_URL = 'https://6abb8fd7b2118ed7abb904f1.mockapi.io/PD/Sema'
+const RANKS_URL = 'https://6abbd366b2118ed7abb95cf8.mockapi.io/pd/ranks'
+const UNITS_URL = 'https://6abbd366b2118ed7abb95cf8.mockapi.io/pd/units'
+const ROSTER_URL = 'https://6abb8fd7b2118ed7abb904f1.mockapi.io/PD/Sema'
 
-async function readResponse(response) {
-  if (!response.ok) throw new Error(`Şema API isteği başarısız oldu (${response.status}).`)
+async function readResponse(response, label) {
+  if (!response.ok) throw new Error(`${label} API isteği başarısız oldu (${response.status}).`)
   return response.json()
 }
 
-function extractSchema(payload) {
-  const records = Array.isArray(payload) ? payload : [payload]
-  const record = [...records].reverse().find((item) => item?.data?.ranks && item?.data?.units && item?.data?.roster)
-  if (!record) throw new Error('API yanıtında rütbeler, birimler ve personel listesi bulunamadı.')
-  return record.data
+async function readList(url, label) {
+  const data = await readResponse(await fetch(url), label)
+  if (!Array.isArray(data)) throw new Error(`${label} API yanıtı liste biçiminde değil.`)
+  return data
 }
 
 export async function getSchema() {
-  return extractSchema(await readResponse(await fetch(SCHEMA_URL)))
+  const [ranks, units, roster] = await Promise.all([
+    readList(RANKS_URL, 'Rütbeler'),
+    readList(UNITS_URL, 'Birimler'),
+    readList(ROSTER_URL, 'Şema'),
+  ])
+  return { ranks, units, roster }
 }
 
 export async function addRosterMember(schema, member) {
-  const updated = { ...schema, roster: [...schema.roster, { ...member, id: Date.now() }] }
-  await saveSchemaSnapshot(updated)
-  return updated
+  const created = await readResponse(await fetch(ROSTER_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(member),
+  }), 'Personel ekleme')
+  return { ...schema, roster: [...schema.roster, created] }
 }
 
 export async function deleteRosterMember(schema, memberId) {
-  const updated = { ...schema, roster: schema.roster.filter((member) => String(member.id) !== String(memberId)) }
-  await saveSchemaSnapshot(updated)
-  return updated
+  await readResponse(await fetch(`${ROSTER_URL}/${encodeURIComponent(memberId)}`, { method: 'DELETE' }), 'Personel silme')
+  return { ...schema, roster: schema.roster.filter((member) => String(member.id) !== String(memberId)) }
 }
 
 export async function updateRosterMember(schema, memberId, changes) {
-  const updated = {
-    ...schema,
-    roster: schema.roster.map((member) => String(member.id) === String(memberId) ? { ...member, ...changes } : member),
-  }
-  await saveSchemaSnapshot(updated)
-  return updated
-}
-
-async function saveSchemaSnapshot(data) {
-  // API yanıtında şema kaydının ID'si olmadığı için değişiklikler yeni bir kayıt olarak eklenir.
-  const response = await fetch(SCHEMA_URL, {
-    method: 'POST',
+  const updated = await readResponse(await fetch(`${ROSTER_URL}/${encodeURIComponent(memberId)}`, {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ success: true, data }),
-  })
-  await readResponse(response)
+    body: JSON.stringify(changes),
+  }), 'Personel güncelleme')
+  return { ...schema, roster: schema.roster.map((member) => String(member.id) === String(memberId) ? { ...member, ...updated } : member) }
 }

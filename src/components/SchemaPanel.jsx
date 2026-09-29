@@ -3,7 +3,7 @@ import { BadgeCheck, Building2, Pencil, Plus, RefreshCw, Search, Shield, Trash2,
 import { UNIT_LABELS } from '../constants'
 
 const inputClass = 'w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-sky-500'
-const RANK_ORDER = ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen', 'Dedektiv III', 'Kıdemli Çavuş', 'Dedektiv II', 'Çavuş', 'Dedektiv I', 'Memur Şefi', 'Kıdemli Memur III', 'Memur II', 'Memur I', 'Cadet']
+const RANK_ORDER = ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen', 'Kıdemli Dedektif', 'Kıdemli Çavuş', 'Dedektif', 'Çavuş', 'Çaylak Dedektif', 'Memur Şefi', 'Kıdemli Memur III', 'Memur II', 'Memur I', 'Cadet']
 const BADGE_RULES = {
   'Polis Şefi': { min: 101, max: 101 }, 'Polis Şefi Yardımcısı': { min: 102, max: 102 },
   Binbaşı: { min: 201, max: 299 }, Yüzbaşı: { min: 301, max: 399 },
@@ -11,6 +11,7 @@ const BADGE_RULES = {
   'Kıdemli Çavuş': { min: 501, max: 599 }, Çavuş: { min: 601, max: 699 },
   'Memur Şefi': { min: 701, max: 799 }, 'Kıdemli Memur III': { min: 801, max: 899 },
   'Memur II': { min: 901, max: 999 }, 'Memur I': { min: 1001, max: 1099 }, Cadet: { min: 1101, max: 1199 },
+  'Çaylak Dedektif': { min: 10, max: 15 }, Dedektif: { min: 5, max: 10 }, 'Kıdemli Dedektif': { min: 1, max: 5 },
   'Dedektiv I': { min: 10, max: 15 }, 'Dedektiv II': { min: 5, max: 10 }, 'Dedektiv III': { min: 1, max: 5 },
 }
 
@@ -43,10 +44,7 @@ export default function SchemaPanel({ schema, loading, error, onRefresh, onAdd, 
     const assigned = new Set((schema?.roster || []).map((item) => item.user_name.trim().toLocaleLowerCase('tr-TR')))
     return users.map((item) => ({ ...item, displayName: `${item.firstName || ''} ${item.lastName || ''}`.trim() })).filter((item) => item.displayName && !assigned.has(item.displayName.toLocaleLowerCase('tr-TR')))
   }, [schema, users])
-  const ranks = useMemo(() => {
-    const options = schema?.ranks || []
-    return options.some((item) => item.name === 'Cadet') ? options : [...options, { id: 'cadet', name: 'Cadet' }]
-  }, [schema])
+  const ranks = useMemo(() => schema?.ranks || [], [schema])
   const sortedRoster = useMemo(() => [...(schema?.roster || [])].sort((a, b) => {
     const aIndex = RANK_ORDER.indexOf(a.rank), bIndex = RANK_ORDER.indexOf(b.rank)
     const rankDiff = (aIndex < 0 ? RANK_ORDER.length : aIndex) - (bIndex < 0 ? RANK_ORDER.length : bIndex)
@@ -58,7 +56,7 @@ export default function SchemaPanel({ schema, loading, error, onRefresh, onAdd, 
     return sortedRoster.filter((member) => !term || [member.rank, member.user_name, member.badge_number, member.unit].some((value) => String(value || '').toLocaleLowerCase('tr-TR').includes(term)))
   }, [sortedRoster, search])
   const badgeRule = BADGE_RULES[rank]
-  const isDetective = ['Dedektiv I', 'Dedektiv II', 'Dedektiv III'].includes(rank)
+  const isDetective = ['Çaylak Dedektif', 'Dedektif', 'Kıdemli Dedektif', 'Dedektiv I', 'Dedektiv II', 'Dedektiv III'].includes(rank)
 
   const closeForm = () => { setOpen(false); setEditingMember(null); setRank(''); setUserName(''); setBadgeNumber(''); setUnit(''); setFormError('') }
   const beginEdit = (member) => { setEditingMember(member); setRank(member.rank || ''); setUserName(member.user_name || ''); setBadgeNumber(badgeDigits(member.badge_number)); setUnit(member.unit || ''); setFormError(''); setOpen(true) }
