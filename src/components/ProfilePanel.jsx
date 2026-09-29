@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { BadgeCheck, Building2, Eye, Heart, MessageSquareText, Send, Shield, UserRound } from 'lucide-react'
+import { BadgeCheck, Building2, Eye, Heart, KeyRound, MessageSquareText, Send, Shield, UserRound } from 'lucide-react'
 import { createComment, createProfileLike, listComments } from '../lib/commentsApi'
 import { listCaseFiles } from '../lib/caseFilesApi'
 import { UNIT_LABELS } from '../constants'
@@ -8,7 +8,7 @@ const fieldClass = 'w-full rounded-lg border border-slate-700 bg-slate-950 px-3 
 const displayName = (user) => `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
 const isLikeRecord = (item) => item.type === 'like' || (Number(item.rating) === 0 && !String(item.comment || '').trim())
 
-export default function ProfilePanel({ users, currentUser, profileUserId, profileName, onOpenProfile, onOpenCaseFile, schema, schemaLoading }) {
+export default function ProfilePanel({ users, currentUser, profileUserId, profileName, onOpenProfile, onOpenCaseFile, schema, schemaLoading, onChangePassword }) {
   const [comments, setComments] = useState([])
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [commentsError, setCommentsError] = useState('')
@@ -20,6 +20,11 @@ export default function ProfilePanel({ users, currentUser, profileUserId, profil
   const [caseFiles, setCaseFiles] = useState([])
   const [caseFilesLoading, setCaseFilesLoading] = useState(true)
   const [caseFilesError, setCaseFilesError] = useState('')
+  const [passwordForm, setPasswordForm] = useState({ current: '', next: '', confirm: '' })
+  const [passwordBusy, setPasswordBusy] = useState(false)
+  const [passwordError, setPasswordError] = useState('')
+  const [passwordNotice, setPasswordNotice] = useState('')
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false)
 
   const profileUser = users.find((item) => String(item.id) === String(profileUserId)) || (String(profileUserId) === String(currentUser.id) ? currentUser : { id: profileUserId, firstName: profileName, role: 'user' })
   const ownProfile = String(profileUser.id) === String(currentUser.id)
@@ -65,6 +70,16 @@ export default function ProfilePanel({ users, currentUser, profileUserId, profil
     finally { setLiking(false) }
   }
 
+  async function changePassword(event) {
+    event.preventDefault(); setPasswordError(''); setPasswordNotice('')
+    if (passwordForm.next.length < 6) { setPasswordError('Yeni şifre en az 6 karakter olmalıdır.'); return }
+    if (passwordForm.next !== passwordForm.confirm) { setPasswordError('Yeni şifreler eşleşmiyor.'); return }
+    setPasswordBusy(true)
+    try { await onChangePassword(passwordForm.current, passwordForm.next); setPasswordForm({ current: '', next: '', confirm: '' }); setPasswordNotice('Şifreniz başarıyla değiştirildi.'); setPasswordModalOpen(false) }
+    catch (error) { setPasswordError(error.message || 'Şifre değiştirilemedi.') }
+    finally { setPasswordBusy(false) }
+  }
+
   return <main className="mx-auto max-w-[1120px] px-4 py-7 sm:px-6">
     <div className="mb-6"><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#c9a24b]">LSPD · PERSONEL</p><h2 className="mt-1 text-2xl font-bold text-white">Profil</h2></div>
     <section className="relative mb-6 overflow-hidden rounded-3xl border border-slate-700/80 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-[#1c3760] via-[#101b2e] to-[#0a111e] p-6 shadow-2xl shadow-black/20 sm:p-9">
@@ -80,6 +95,10 @@ export default function ProfilePanel({ users, currentUser, profileUserId, profil
       <article className="group rounded-2xl border border-slate-800 bg-gradient-to-br from-[#131f33] to-[#0d1626] p-5 shadow-lg shadow-black/10 transition hover:border-sky-300/20"><div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><BadgeCheck className="h-5 w-5" /></div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Rozet numarası</p><p className="mt-2 font-mono text-xl font-bold text-white">{rosterEntry?.badge_number || '—'}</p></article>
       <article className="group rounded-2xl border border-slate-800 bg-gradient-to-br from-[#131f33] to-[#0d1626] p-5 shadow-lg shadow-black/10 transition hover:border-emerald-300/20"><div className="mb-5 flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-400/10 text-emerald-300"><Building2 className="h-5 w-5" /></div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Birim</p><p className="mt-2 text-lg font-semibold text-white">{UNIT_LABELS[rosterEntry?.unit] || rosterEntry?.unit || '—'}</p></article>
     </div>
+
+    {ownProfile && <section className="mt-6 flex flex-col gap-4 rounded-2xl border border-slate-800 bg-[#0d1626] p-5 sm:flex-row sm:items-center sm:justify-between sm:px-6"><div className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-400/10 text-amber-300"><KeyRound className="h-5 w-5" /></div><div><h3 className="font-bold text-white">Şifre</h3><p className="text-xs text-slate-500">Hesap şifrenizi güncelleyin.</p></div></div><button type="button" onClick={() => { setPasswordError(''); setPasswordNotice(''); setPasswordModalOpen(true) }} className="inline-flex w-fit items-center gap-2 rounded-lg bg-[#1e3a8a] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800"><KeyRound className="h-4 w-4" />Şifreyi değiştir</button></section>}
+
+    {ownProfile && passwordModalOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !passwordBusy) setPasswordModalOpen(false) }}><section role="dialog" aria-modal="true" aria-labelledby="password-modal-title" className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-700 bg-[#0d1626] shadow-2xl"><div className="flex items-center gap-3 border-b border-slate-800 px-5 py-5"><div className="grid h-10 w-10 place-items-center rounded-lg bg-amber-400/10 text-amber-300"><KeyRound className="h-5 w-5" /></div><div><h3 id="password-modal-title" className="font-bold text-white">Şifreyi değiştir</h3><p className="text-xs text-slate-500">Mevcut şifrenizi doğrulayarak yeni bir şifre belirleyin.</p></div></div><form onSubmit={changePassword} className="grid gap-4 p-5"><label className="text-xs font-semibold text-slate-300">Mevcut şifre<input required type="password" autoComplete="current-password" value={passwordForm.current} onChange={(event) => setPasswordForm({ ...passwordForm, current: event.target.value })} className={`${fieldClass} mt-1.5`} /></label><label className="text-xs font-semibold text-slate-300">Yeni şifre<input required minLength={6} type="password" autoComplete="new-password" value={passwordForm.next} onChange={(event) => setPasswordForm({ ...passwordForm, next: event.target.value })} className={`${fieldClass} mt-1.5`} /></label><label className="text-xs font-semibold text-slate-300">Yeni şifreyi tekrarla<input required minLength={6} type="password" autoComplete="new-password" value={passwordForm.confirm} onChange={(event) => setPasswordForm({ ...passwordForm, confirm: event.target.value })} className={`${fieldClass} mt-1.5`} /></label>{passwordError && <p role="alert" className="text-sm text-red-300">{passwordError}</p>}<div className="flex justify-end gap-2 pt-1"><button type="button" onClick={() => setPasswordModalOpen(false)} disabled={passwordBusy} className="rounded-lg border border-slate-700 px-4 py-2.5 text-sm font-semibold text-slate-300 hover:bg-slate-800 disabled:opacity-50">İptal et</button><button disabled={passwordBusy} className="inline-flex items-center gap-2 rounded-lg bg-[#1e3a8a] px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-800 disabled:opacity-50"><KeyRound className="h-4 w-4" />{passwordBusy ? 'Güncelleniyor…' : 'Şifreni yenilə'}</button></div></form></section></div>}
 
     <section className="mt-6 overflow-hidden rounded-2xl border border-slate-800 bg-[#0d1626]"><div className="flex items-center justify-between border-b border-slate-800 px-5 py-5 sm:px-6"><div><h3 className="font-bold text-white">Oluşturduğu dosyalar</h3><p className="mt-1 text-xs text-slate-500">Bu personelin hazırladığı operasyon kayıtları</p></div><span className="rounded-full border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-300">{authoredFiles.length}</span></div><div className="divide-y divide-slate-800">{caseFilesLoading ? <p className="p-6 text-center text-sm text-slate-400">Dosyalar yükleniyor…</p> : caseFilesError ? <p role="alert" className="p-5 text-sm text-red-300">Dosyalar yüklenemedi: {caseFilesError}</p> : authoredFiles.length ? authoredFiles.map((file) => <button type="button" key={file.id} onClick={() => onOpenCaseFile(file)} className="group flex w-full flex-wrap items-center justify-between gap-3 px-5 py-4 text-left transition hover:bg-slate-800/40"><div><p className="font-semibold text-white group-hover:text-sky-200">{file.title || file.documentType || 'Dosya'}</p><p className="mt-1 text-xs text-slate-500">{file.caseId || '—'} · {file.date || (file.createdAt ? new Date(file.createdAt).toLocaleDateString('tr-TR') : 'Tarih yok')} · {file.documentType || 'Belge'}</p></div><div className="flex items-center gap-3"><span className="rounded-full border border-slate-700 bg-slate-950/40 px-2.5 py-1 text-[10px] font-bold text-slate-300">{file.status || 'Kayıtlı'}</span><span className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-300"><Eye className="h-4 w-4" /> Aç / İncele</span></div></button>) : <div className="px-5 py-9 text-center text-sm text-slate-500">Henüz dosya oluşturulmamış.</div>}</div></section>
 
