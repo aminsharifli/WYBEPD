@@ -1,0 +1,25 @@
+{
+  "name": "lspd-case-file-generator",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "LSPD criminal case file & report generator for FiveM roleplay — exports the document as a high-quality PNG.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^0.441.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.13",
+    "vite": "^5.4.8"
+  }
+}
