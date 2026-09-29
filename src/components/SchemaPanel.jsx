@@ -3,7 +3,7 @@ import { BadgeCheck, Building2, Pencil, Plus, RefreshCw, Search, Shield, Trash2,
 import { UNIT_LABELS } from '../constants'
 
 const inputClass = 'w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-white outline-none focus:border-sky-500'
-const RANK_ORDER = ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen', 'Kıdemli Çavuş', 'Çavuş', 'Memur Şefi', 'Kıdemli Memur III', 'Memur II', 'Memur I', 'Cadet']
+const RANK_ORDER = ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen', 'Dedektiv III', 'Kıdemli Çavuş', 'Dedektiv II', 'Çavuş', 'Dedektiv I', 'Memur Şefi', 'Kıdemli Memur III', 'Memur II', 'Memur I', 'Cadet']
 const BADGE_RULES = {
   'Polis Şefi': { min: 101, max: 101 }, 'Polis Şefi Yardımcısı': { min: 102, max: 102 },
   Binbaşı: { min: 201, max: 299 }, Yüzbaşı: { min: 301, max: 399 },
@@ -11,6 +11,7 @@ const BADGE_RULES = {
   'Kıdemli Çavuş': { min: 501, max: 599 }, Çavuş: { min: 601, max: 699 },
   'Memur Şefi': { min: 701, max: 799 }, 'Kıdemli Memur III': { min: 801, max: 899 },
   'Memur II': { min: 901, max: 999 }, 'Memur I': { min: 1001, max: 1099 }, Cadet: { min: 1101, max: 1199 },
+  'Dedektiv I': { min: 10, max: 15 }, 'Dedektiv II': { min: 5, max: 10 }, 'Dedektiv III': { min: 1, max: 5 },
 }
 
 function badgeDigits(value) {
@@ -57,10 +58,10 @@ export default function SchemaPanel({ schema, loading, error, onRefresh, onAdd, 
     return sortedRoster.filter((member) => !term || [member.rank, member.user_name, member.badge_number, member.unit].some((value) => String(value || '').toLocaleLowerCase('tr-TR').includes(term)))
   }, [sortedRoster, search])
   const badgeRule = BADGE_RULES[rank]
-  const isDetective = unit === 'Detective Bureau - FTO'
+  const isDetective = ['Dedektiv I', 'Dedektiv II', 'Dedektiv III'].includes(rank)
 
   const closeForm = () => { setOpen(false); setEditingMember(null); setRank(''); setUserName(''); setBadgeNumber(''); setUnit(''); setFormError('') }
-  const beginEdit = (member) => { setEditingMember(member); setRank(member.rank || ''); setUserName(member.user_name || ''); setBadgeNumber(member.badge_number || ''); setUnit(member.unit || ''); setFormError(''); setOpen(true) }
+  const beginEdit = (member) => { setEditingMember(member); setRank(member.rank || ''); setUserName(member.user_name || ''); setBadgeNumber(badgeDigits(member.badge_number)); setUnit(member.unit || ''); setFormError(''); setOpen(true) }
 
   const submit = async (event) => {
     event.preventDefault(); setFormError('')
@@ -70,10 +71,11 @@ export default function SchemaPanel({ schema, loading, error, onRefresh, onAdd, 
       return
     }
     const digits = String(numericBadge)
-    if ((schema?.roster || []).some((item) => String(item.id) !== String(editingMember?.id) && badgeDigits(item.badge_number) === digits)) { setFormError('Bu rozet numarası başka bir personel tarafından kullanılıyor.'); return }
+    const badgeCode = `${isDetective ? 'D-' : ''}${digits}`
+    if ((schema?.roster || []).some((item) => String(item.id) !== String(editingMember?.id) && String(item.badge_number || '').replace(/^D\s*[-–]?\s*/i, '') === digits && /^D\s*[-–]?\s*/i.test(String(item.badge_number || '')) === isDetective)) { setFormError('Bu rozet numarası başka bir personel tarafından kullanılıyor.'); return }
     setSaving(true)
     try {
-      const changes = { rank, user_name: userName, badge_number: `${isDetective ? 'D-' : ''}${digits}`, unit: unit || null }
+      const changes = { rank, user_name: userName, badge_number: badgeCode, unit: unit || null }
       if (editingMember) await onUpdate(editingMember.id, changes)
       else await onAdd(changes)
       closeForm()
