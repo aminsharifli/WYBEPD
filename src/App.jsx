@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, BookOpen, FilePlus2, Home, LogOut, Pencil, Radio, Shield, UserRound, Users } from 'lucide-react'
+import { Archive, BookOpen, FilePlus2, Home, LogOut, Menu, Pencil, Radio, Shield, UserRound, Users, X } from 'lucide-react'
 import FormPanel from './components/FormPanel'
 import DocumentPreview from './components/DocumentPreview'
 import RiceBadge from './components/RiceBadge'
@@ -45,6 +45,7 @@ export default function App() {
   const [schemaError, setSchemaError] = useState('')
   const [profileTargetId, setProfileTargetId] = useState(null)
   const [profileTargetName, setProfileTargetName] = useState('')
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     let active = true
@@ -78,6 +79,7 @@ export default function App() {
   const loadArchive = async () => { setArchiveLoading(true); setArchiveError(''); try { setArchive(await listCaseFiles()) } catch (error) { setArchiveError(`Arşiv yüklenemedi: ${error.message}`) } finally { setArchiveLoading(false) } }
   const loadSchema = async () => { setSchemaLoading(true); setSchemaError(''); try { const [nextSchema, nextUsers] = await Promise.all([getSchema(), listUsers()]); setSchema(nextSchema); setUsers(nextUsers); return nextSchema } catch (error) { setSchemaError(`Şema yüklenemedi: ${error.message}`); return null } finally { setSchemaLoading(false) } }
   const navigate = async (next) => {
+    setMobileMenuOpen(false)
     setView(next)
     if (next === 'archive') loadArchive()
     if (next === 'profile') { setProfileTargetId(String(user?.id || '')); setProfileTargetName('') }
@@ -87,7 +89,7 @@ export default function App() {
       const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
       const entry = currentSchema?.roster?.find((item) => item.user_name?.trim().toLocaleLowerCase('tr-TR') === name.toLocaleLowerCase('tr-TR'))
       setEditingId(null); setEditingProfileId(null)
-      setForm((current) => ({ ...current, officerName: name, badgeNumber: entry?.badge_number || '' }))
+      setForm((current) => ({ ...current, officerName: name, badgeNumber: entry?.badge_number || '', status: user?.role === 'admin' ? current.status : 'ONAY BEKLİYOR' }))
     }
   }
   const openProfile = (userId, name = '') => { setProfileTargetId(String(userId)); setProfileTargetName(name); setView('profile'); if (!schema) loadSchema() }
@@ -104,11 +106,12 @@ export default function App() {
     setUser(updated); setUsers((items) => items.map((item) => String(item.id) === String(updated.id) ? updated : item))
   }
   const addFiles = async (fileList) => { const images = Array.from(fileList || []).filter((file) => file.type.startsWith('image/')); if (!images.length) return; const items = await Promise.all(images.map(async (file) => ({ id: uid(), src: await fileToDataUrl(file), caption: '', name: file.name }))); setEvidence((previous) => [...previous, ...items]) }
-  const startNewFile = () => { setForm({ ...createInitialForm(), officerName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), badgeNumber: schema?.roster?.find((item) => item.user_name?.trim().toLocaleLowerCase('tr-TR') === `${user?.firstName || ''} ${user?.lastName || ''}`.trim().toLocaleLowerCase('tr-TR'))?.badge_number || '' }); setEvidence([]); setEditingId(null); setEditingProfileId(null) }
+  const startNewFile = () => { setForm({ ...createInitialForm(), status: user?.role === 'admin' ? STATUS_OPTIONS[0].value : 'ONAY BEKLİYOR', officerName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(), badgeNumber: schema?.roster?.find((item) => item.user_name?.trim().toLocaleLowerCase('tr-TR') === `${user?.firstName || ''} ${user?.lastName || ''}`.trim().toLocaleLowerCase('tr-TR'))?.badge_number || '' }); setEvidence([]); setEditingId(null); setEditingProfileId(null) }
   const saveToSystem = async () => {
     setSaving(true)
     try {
-      const payload = await toApiCaseFile(form, evidence, editingProfileId || user.id)
+      const savedForm = user.role === 'admin' || editingId ? form : { ...form, status: 'ONAY BEKLİYOR' }
+      const payload = await toApiCaseFile(savedForm, evidence, editingProfileId || user.id)
       if (editingId) await updateCaseFile(editingId, payload)
       else await saveCaseFile(payload)
       return true
@@ -148,7 +151,8 @@ export default function App() {
     <Toast message={toast} onClose={() => setToast('')} />
     <header className="site-header"><div className="site-header-inner">
       <button onClick={() => navigate('home')} className="site-brand"><RiceBadge className="h-14 w-14 shrink-0" /><span><strong>WYBE - <em>LSPD</em></strong><small>LOS SANTOS POLICE DEPARTMENT</small></span></button>
-      <nav className="site-nav" aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['codes', Radio, 'Kodlar'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={view === id ? 'selected' : ''}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</nav>
+      <button type="button" className="mobile-menu-toggle" aria-label={mobileMenuOpen ? 'Menyunu bağla' : 'Menyunu aç'} aria-expanded={mobileMenuOpen} aria-controls="main-navigation" onClick={() => setMobileMenuOpen((open) => !open)}>{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
+      <nav id="main-navigation" className={`site-nav${mobileMenuOpen ? ' is-open' : ''}`} aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['codes', Radio, 'Kodlar'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={view === id ? 'selected' : ''}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</nav>
       <div className="account-actions"><span className="account-label">{user.firstName} · {user.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}</span><button type="button" onClick={() => navigate('profile')} className={`account-profile ${view === 'profile' ? 'selected' : ''}`}><UserRound className="h-4 w-4" /><span>Profil</span></button><button title="Çıkış yap" onClick={() => { sessionStorage.removeItem('pd-user-id'); setUser(null); setView('home') }} className="account-logout"><LogOut className="h-4 w-4" /></button></div>
     </div></header>
     {view === 'home' && <HomeScreen onNavigate={navigate} />}
@@ -159,6 +163,6 @@ export default function App() {
     {view === 'profile' && <ProfilePanel users={users} currentUser={user} profileUserId={profileTargetId || user.id} profileName={profileTargetName} onOpenProfile={openProfile} onOpenCaseFile={openCaseFile} schema={schema} schemaLoading={schemaLoading} onChangePassword={changePassword} />}
     {view === 'archive' && <ArchivePanel files={archive} loading={archiveLoading} error={archiveError} onRefresh={loadArchive} onOpen={openCaseFile} onDelete={removeCaseFile} onStatusChange={changeCaseFileStatus} deletingId={deletingId} updatingId={updatingId} isAdmin={user.role === 'admin'} />}
     {view === 'inspect' && <main className="mx-auto max-w-[1000px] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1680ff]">Dosya İnceleme</p><h2 className="mt-1 text-xl font-bold text-white">{form.caseId || 'Dosya'}</h2></div>{user.role === 'admin' && <button onClick={() => setView('create')} className="inline-flex items-center gap-2 rounded-md border border-[#1680ff]/60 bg-[#1680ff]/10 px-4 py-2 text-sm font-bold text-[#1680ff] transition hover:bg-[#1680ff]/20"><Pencil className="h-4 w-4" /> Düzenle</button>}</div><section className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 sm:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview form={form} evidence={evidence} /></div></section></main>}
-    {view === 'create' && <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 p-4 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:p-6"><FormPanel form={form} setField={setField} onRegenerateId={() => setField('caseId', generateCaseId())} evidence={evidence} addFiles={addFiles} updateCaption={(id, caption) => setEvidence((current) => current.map((item) => item.id === id ? { ...item, caption } : item))} removeEvidence={(id) => setEvidence((current) => current.filter((item) => item.id !== id))} onDownload={handleDownload} onSave={handleSave} onNewFile={startNewFile} busy={busy} saving={saving} clearAfterSave={clearAfterSave} setClearAfterSave={setClearAfterSave} isEditing={Boolean(editingId)} /><section className="min-w-0"><div className="mb-3 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">CANLI ÖNİZLEME</span><span className="text-[11px] text-slate-500">~2460 px genişlik · PNG · 3×</span></div><div className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 lg:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview ref={previewRef} form={form} evidence={evidence} /></div></div></section></main>}
+    {view === 'create' && <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 p-4 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:p-6"><FormPanel form={form} setField={setField} onRegenerateId={() => setField('caseId', generateCaseId())} evidence={evidence} addFiles={addFiles} updateCaption={(id, caption) => setEvidence((current) => current.map((item) => item.id === id ? { ...item, caption } : item))} removeEvidence={(id) => setEvidence((current) => current.filter((item) => item.id !== id))} onDownload={handleDownload} onSave={handleSave} onNewFile={startNewFile} busy={busy} saving={saving} clearAfterSave={clearAfterSave} setClearAfterSave={setClearAfterSave} isEditing={Boolean(editingId)} isAdmin={user.role === 'admin'} /><section className="min-w-0"><div className="mb-3 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">CANLI ÖNİZLEME</span><span className="text-[11px] text-slate-500">~2460 px genişlik · PNG · 3×</span></div><div className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 lg:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview ref={previewRef} form={form} evidence={evidence} /></div></div></section></main>}
   </div>
 }

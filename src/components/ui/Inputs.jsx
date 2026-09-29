@@ -1,4 +1,5 @@
 import React from 'react'
+import { ChevronDown } from 'lucide-react'
 
 /**
  * Small set of reusable, dark-themed form controls so the left panel stays consistent.
@@ -42,13 +43,16 @@ export function SelectField({ label, id, options = [], ...props }) {
   return (
     <div>
       {label ? <Label htmlFor={id}>{label}</Label> : null}
-      <select id={id} className={`${baseInput} appearance-none pr-8`} {...props}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <div className="relative">
+        <select id={id} className={`${baseInput} appearance-none pr-9`} {...props}>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      </div>
     </div>
   )
 }
