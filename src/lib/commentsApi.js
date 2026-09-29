@@ -39,3 +39,8 @@ export async function createProfileLike({ profileId, authorId }) {
     }),
   }))
 }
+
+export async function deleteComment(commentId) {
+  return readResponse(await fetch(`${COMMENTS_URL}/${encodeURIComponent(commentId)}`, { method: 'DELETE' }))
+}
+
