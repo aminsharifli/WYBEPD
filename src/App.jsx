@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, BookOpen, FilePlus2, Home, LogOut, Pencil, Shield, UserRound, Users } from 'lucide-react'
+import { Archive, BookOpen, FilePlus2, Home, LogOut, Pencil, Radio, Shield, UserRound, Users } from 'lucide-react'
 import FormPanel from './components/FormPanel'
 import DocumentPreview from './components/DocumentPreview'
 import RiceBadge from './components/RiceBadge'
@@ -18,6 +18,7 @@ import { addRosterMember, deleteRosterMember, getSchema, updateRosterMember } fr
 import ProfilePanel from './components/ProfilePanel'
 import AdminPanel from './components/AdminPanel'
 import HandbookPanel from './components/HandbookPanel'
+import CodesPanel from './components/CodesPanel'
 
 function createInitialForm() {
   const { date, time } = nowParts()
@@ -147,12 +148,13 @@ export default function App() {
     <Toast message={toast} onClose={() => setToast('')} />
     <header className="sticky top-0 z-30 border-b border-slate-800 bg-[#0a0f1a]/90 backdrop-blur"><div className="mx-auto flex max-w-[1600px] items-center gap-3 px-4 py-3">
       <button onClick={() => navigate('home')} className="flex items-center gap-3 text-left"><RiceBadge className="h-9 w-auto max-w-16 shrink-0" /><div className="hidden sm:block"><h1 className="text-sm font-bold uppercase tracking-[0.2em] text-white">{ORG.headerTitle}</h1><p className="text-[11px] text-slate-400">Dosya Yönetim Merkezi</p></div></button>
-      <nav className="ml-auto flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/50 p-1" aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['profile', UserRound, 'Profil'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-semibold transition sm:px-3 ${view === id ? 'bg-[#1e3a8a] text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Icon className="h-4 w-4" /><span className="hidden md:inline">{label}</span></button>)}</nav>
+      <nav className="ml-auto flex items-center gap-1 rounded-lg border border-slate-800 bg-slate-950/50 p-1" aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['profile', UserRound, 'Profil'], ['codes', Radio, 'Kodlar'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-2 text-xs font-semibold transition sm:px-3 ${view === id ? 'bg-[#1e3a8a] text-white' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}><Icon className="h-4 w-4" /><span className="hidden md:inline">{label}</span></button>)}</nav>
       <span className="hidden text-xs text-slate-400 sm:inline">{user.firstName} · {user.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}</span>
       <button title="Çıkış yap" onClick={() => { sessionStorage.removeItem('pd-user-id'); setUser(null); setView('home') }} className="rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white"><LogOut className="h-4 w-4" /></button>
     </div></header>
     {view === 'home' && <HomeScreen onNavigate={navigate} />}
     {view === 'handbook' && <HandbookPanel />}
+    {view === 'codes' && <CodesPanel />}
     {view === 'admin' && user.role === 'admin' && <AdminPanel users={users} currentUserId={user.id} onCreateUser={createManagedUser} onDeleteUser={removeManagedUser} onUsersRefresh={async () => setUsers(await listUsers())} />}
     {view === 'schema' && <SchemaPanel schema={schema} loading={schemaLoading} error={schemaError} onRefresh={loadSchema} onAdd={addSchemaMember} onUpdate={editSchemaMember} onDelete={removeSchemaMember} onOpenProfile={openProfile} users={users} isAdmin={user.role === 'admin'} />}
     {view === 'profile' && <ProfilePanel users={users} currentUser={user} profileUserId={profileTargetId || user.id} profileName={profileTargetName} onOpenProfile={openProfile} onOpenCaseFile={openCaseFile} schema={schema} schemaLoading={schemaLoading} onChangePassword={changePassword} />}
