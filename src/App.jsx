@@ -86,6 +86,12 @@ export default function App() {
     let currentSchema = schema
     if ((next === 'schema' || next === 'profile' || next === 'create') && !currentSchema) currentSchema = await loadSchema()
     if (next === 'create') {
+      // Arşivden açılmış bir kayıttan yeni dosyaya geçerken kayıtlı içeriği
+      // taslağa taşımayın. Aynı ekrandaki taslak gezinti boyunca korunur.
+      if (editingId) {
+        startNewFile()
+        return
+      }
       const name = `${user?.firstName || ''} ${user?.lastName || ''}`.trim()
       const entry = currentSchema?.roster?.find((item) => item.user_name?.trim().toLocaleLowerCase('tr-TR') === name.toLocaleLowerCase('tr-TR'))
       setEditingId(null); setEditingProfileId(null)

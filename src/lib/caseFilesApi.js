@@ -77,7 +77,11 @@ async function compressEvidenceImage(source) {
 }
 
 export async function toApiCaseFile(form, evidence, profileId) {
-  const evidenceImage = await compressEvidenceImage(evidence[0]?.src)
+  const evidenceImages = await Promise.all(evidence.map(async (item) => ({
+    src: await compressEvidenceImage(item.src),
+    caption: item.caption || '',
+    name: item.name || '',
+  })))
   return {
     createdAt: new Date().toISOString(),
     caseId: form.caseId,
@@ -91,13 +95,25 @@ export async function toApiCaseFile(form, evidence, profileId) {
     title: form.sectionTitle,
     narrative: form.narrative,
     charges: form.charges,
-    evidenceImage,
-    evidenceCaption: evidence[0]?.caption || '',
+    // Keep the legacy first-image fields so older clients can still read new files.
+    evidenceImages,
+    evidenceImage: evidenceImages[0]?.src || '',
+    evidenceCaption: evidenceImages[0]?.caption || '',
     profil_id: String(profileId),
   }
 }
 
 export function fromApiCaseFile(file) {
+  const evidence = Array.isArray(file.evidenceImages) && file.evidenceImages.length
+    ? file.evidenceImages.map((item, index) => ({
+      id: `archive-${file.id}-${index}`,
+      src: typeof item === 'string' ? item : item.src || '',
+      caption: typeof item === 'string' ? '' : item.caption || '',
+      name: typeof item === 'string' ? 'Kayıtlı kanıt' : item.name || 'Kayıtlı kanıt',
+    })).filter((item) => item.src)
+    : file.evidenceImage
+      ? [{ id: `archive-${file.id}`, src: file.evidenceImage, caption: file.evidenceCaption || '', name: 'Kayıtlı kanıt' }]
+      : []
   return {
     form: {
       docType: file.documentType || '',
@@ -112,8 +128,6 @@ export function fromApiCaseFile(file) {
       charges: file.charges || '',
       status: file.status || '',
     },
-    evidence: file.evidenceImage
-      ? [{ id: `archive-${file.id}`, src: file.evidenceImage, caption: file.evidenceCaption || '', name: 'Kayıtlı kanıt' }]
-      : [],
+    evidence,
   }
 }
