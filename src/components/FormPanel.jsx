@@ -44,7 +44,7 @@ export default function FormPanel({
   clearAfterSave,
   setClearAfterSave,
   isEditing,
-  isAdmin,
+  canChangeStatus,
 }) {
   const fileRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
@@ -77,13 +77,13 @@ export default function FormPanel({
           onChange={(e) => setField('docType', e.target.value)}
           options={DOC_TYPES}
         />
-        {isAdmin ? <SelectField
+        {canChangeStatus ? <SelectField
           label="Durum Etiketi"
           id="status"
           value={form.status}
           onChange={(e) => setField('status', e.target.value)}
           options={STATUS_OPTIONS}
-        /> : <div><Label htmlFor="status">Durum Etiketi</Label><div id="status" className="flex items-center justify-between rounded-md border border-blue-400/25 bg-blue-400/10 px-3 py-2 text-sm font-semibold text-blue-200"><span>ONAY BEKLİYOR</span><span className="text-xs font-medium text-slate-400">Yönetici onayı bekleniyor</span></div></div>}
+        /> : <div><Label htmlFor="status">Durum Etiketi</Label><div id="status" className="flex items-center justify-between rounded-md border border-blue-400/25 bg-blue-400/10 px-3 py-2 text-sm font-semibold text-blue-200"><span>{form.status || 'ONAY BEKLİYOR'}</span>{!isEditing && <span className="text-xs font-medium text-slate-400">Yönetici onayı bekleniyor</span>}</div></div>}
       </Card>
 
       <Card icon={Hash} title="Temel Bilgiler">
