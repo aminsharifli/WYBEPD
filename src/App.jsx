@@ -60,10 +60,7 @@ export default function App() {
   const [announcements, setAnnouncements] = useState([])
   const [theme, setTheme] = useState(() => {
     try {
-      const savedTheme = localStorage.getItem('pd-site-theme')
-      const initialTheme = !savedTheme || savedTheme === 'blue' ? 'original' : savedTheme
-      if (initialTheme !== savedTheme) localStorage.setItem('pd-site-theme', initialTheme)
-      return initialTheme
+      return localStorage.getItem('pd-site-theme') || 'original'
     } catch { return 'original' }
   })
   const [seenApprovals, setSeenApprovals] = useState(() => {

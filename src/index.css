@@ -345,3 +345,10 @@ body { overflow-x:clip; }
 .app-shell[data-theme] .mobile-menu-toggle:hover,
 .app-shell[data-theme] .hero-arrow:hover,
 .app-shell[data-theme] .home-shortcuts button:hover { border-color:var(--theme-accent)!important; }
+
+/* Fit the landing slider exactly below the responsive header. */
+.home-page { height:calc(100svh - 95px); min-height:0; overflow:hidden; }
+.home-page .home-hero { height:100%; min-height:0; }
+@media(max-width:760px) {
+  .home-page { height:calc(100svh - 112px); min-height:0; }
+}
