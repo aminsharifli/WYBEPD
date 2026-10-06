@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { TextField, TextArea, SelectField, Label } from './ui/Inputs'
 import { DOC_TYPES, STATUS_OPTIONS } from '../constants'
+import OfficerMentionTextarea from './OfficerMentionTextarea'
 
 function Card({ icon: Icon, title, children }) {
   return (
@@ -45,9 +46,13 @@ export default function FormPanel({
   setClearAfterSave,
   isEditing,
   canChangeStatus,
+  roster,
+  users,
 }) {
   const fileRef = useRef(null)
   const [dragOver, setDragOver] = useState(false)
+  const personnelDoc = ['Terfi Tenzil', 'Takdir Belgesi / Övgü', 'Personel Değerlendirme', 'Terfi Tavsiye'].includes(form.docType)
+  const internalDoc = ['Disiplin Soruşturması', 'Şikayet Raporu / İhbar', 'İç İşleri Soruşturma', 'Soruşturma Süresince Görevden Uzaklaştırma'].includes(form.docType)
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,7 +91,7 @@ export default function FormPanel({
         /> : <div><Label htmlFor="status">Durum Etiketi</Label><div id="status" className="flex items-center justify-between rounded-md border border-blue-400/25 bg-blue-400/10 px-3 py-2 text-sm font-semibold text-blue-200"><span>{form.status || 'ONAY BEKLİYOR'}</span>{!isEditing && <span className="text-xs font-medium text-slate-400">Yönetici onayı bekleniyor</span>}</div></div>}
       </Card>
 
-      <Card icon={Hash} title="Temel Bilgiler">
+      <Card icon={Hash} title={personnelDoc ? 'Personel İşlem Bilgileri' : internalDoc ? 'İnceleme Bilgileri' : 'Temel Bilgiler'}>
         <div>
           <Label htmlFor="caseId">Dosya No</Label>
           <div className="flex gap-2">
@@ -130,32 +135,25 @@ export default function FormPanel({
         </div>
 
         <TextField
-          label="Şüpheli Adı"
+          label={personnelDoc ? 'Hakkında İşlem Yapılan Personel' : internalDoc ? 'İlgili Personel / Şahıs' : 'Şüpheli Adı'}
           id="suspects"
-          placeholder="Ad Soyad, Ad Soyad"
+          placeholder={personnelDoc || internalDoc ? 'Personel adı ve soyadı' : 'Ad Soyad, Ad Soyad'}
           value={form.suspects}
           onChange={(e) => setField('suspects', e.target.value)}
         />
       </Card>
 
-      <Card icon={AlignLeft} title="İçerik ve Detaylar">
+      <Card icon={AlignLeft} title={personnelDoc ? 'Değerlendirme ve Tavsiye' : internalDoc ? 'Soruşturma Detayları' : 'İçerik ve Detaylar'}>
         <TextField
-          label="Bölüm Başlığı"
+          label={personnelDoc ? 'İşlem / Tavsiye Başlığı' : internalDoc ? 'İnceleme Başlığı' : 'Bölüm Başlığı'}
           id="sectionTitle"
           placeholder="örn. Silahlı Soygun — Vinewood Bulvarı"
           value={form.sectionTitle}
           onChange={(e) => setField('sectionTitle', e.target.value)}
         />
+        <div><Label htmlFor="narrative">{personnelDoc ? 'Değerlendirme Açıklaması' : internalDoc ? 'Soruşturma Açıklaması' : 'Detaylı Açıklama'} · Memur etiketlemek için @ yazın</Label><OfficerMentionTextarea id="narrative" rows={9} placeholder="Açıklamanızı yazın. Memur etiketlemek için @ ile arayın…" value={form.narrative} onChange={(value) => setField('narrative', value)} roster={roster} users={users} className="w-full resize-y rounded-lg border border-slate-700 bg-slate-950 px-3 py-3 text-sm leading-6 text-white outline-none placeholder:text-slate-500 focus:border-sky-500" /></div>
         <TextArea
-          label="Detaylı Olay Özeti / Açıklama"
-          id="narrative"
-          rows={9}
-          placeholder="Olayın gelişim sırası, taraflar, alınan önlemler…"
-          value={form.narrative}
-          onChange={(e) => setField('narrative', e.target.value)}
-        />
-        <TextArea
-          label="Suçlamalar / İhlaller — her satıra bir suçlama"
+          label={personnelDoc ? 'Karar ve Dayanaklar — her satıra bir madde' : internalDoc ? 'İddialar ve İnceleme Bulguları — her satıra bir madde' : 'Suçlamalar / İhlaller — her satıra bir suçlama'}
           id="charges"
           rows={5}
           placeholder={'Uyuşturucu Ticareti\nYağma (Gasp)\nTehlikeli Sürüş\nRuhsatsız Silah Bulundurma'}

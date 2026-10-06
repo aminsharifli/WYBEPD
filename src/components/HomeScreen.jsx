@@ -29,7 +29,7 @@ export default function HomeScreen({ onNavigate }) {
   const photo = slides[active]?.photo
 
   return <main className="home-page">
-    <section className="home-hero" style={photo ? { backgroundImage: `linear-gradient(90deg,rgba(3,10,22,.9) 0%,rgba(3,10,22,.64) 43%,rgba(3,10,22,.16) 100%),linear-gradient(0deg,rgba(3,10,22,.72),transparent 45%),url("${photo}")` } : undefined}>
+    <section className="home-hero" style={photo ? { backgroundImage: `linear-gradient(90deg,color-mix(in srgb,var(--theme-page,#06101f) 94%,transparent) 0%,color-mix(in srgb,var(--theme-page,#06101f) 72%,transparent) 43%,color-mix(in srgb,var(--theme-page,#06101f) 16%,transparent) 100%),linear-gradient(0deg,color-mix(in srgb,var(--theme-page,#06101f) 76%,transparent),transparent 45%),url("${photo}")` } : undefined}>
       <div className="home-hero-glow" />
       <div className="hero-content" key={active}>
         <p className="hero-eyebrow">LOS SANTOS POLICE DEPARTMENT</p>

@@ -40,6 +40,28 @@ export async function createProfileLike({ profileId, authorId }) {
   }))
 }
 
+export async function listAnnouncements() {
+  const data = await listComments()
+  return data.filter((item) => item.type === 'announcement').sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
+}
+
+export async function createAnnouncement({ comment, authorId, authorName, mentions }) {
+  return readResponse(await fetch(COMMENTS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      profile_id: 'global-announcements',
+      rating: 0,
+      comment: comment.trim(),
+      created_at: new Date().toISOString(),
+      author_id: String(authorId),
+      author_name: authorName,
+      mentions,
+      type: 'announcement',
+    }),
+  }))
+}
+
 export async function deleteComment(commentId) {
   return readResponse(await fetch(`${COMMENTS_URL}/${encodeURIComponent(commentId)}`, { method: 'DELETE' }))
 }

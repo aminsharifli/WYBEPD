@@ -1,8 +1,11 @@
 import React, { forwardRef } from 'react'
 import RiceBadge from './RiceBadge'
 import { ORG, STATUS_STYLES } from '../constants'
+import { formatTurkeyDateTime } from '../lib/helpers'
 
-const GOLD = '#1680ff'
+const GOLD = 'var(--theme-accent, #1680ff)'
+const personnelDocumentTypes = new Set(['Terfi Tenzil', 'Takdir Belgesi / Övgü', 'Personel Değerlendirme', 'Terfi Tavsiye'])
+const internalAffairsTypes = new Set(['Disiplin Soruşturması', 'İç İşleri Soruşturma', 'Şikayet Raporu / İhbar', 'Soruşturma Süresince Görevden Uzaklaştırma'])
 
 function InfoCell({ label, value }) {
   return (
@@ -21,14 +24,14 @@ function InfoCell({ label, value }) {
 function Divider({ children }) {
   return (
     <div className="mb-3 mt-7 flex items-center gap-3">
-      <span className="h-px flex-1" style={{ backgroundColor: `${GOLD}55` }} />
+      <span className="h-px flex-1" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-accent, #1680ff) 33%, transparent)' }} />
       <h3
         className="text-[11px] font-bold uppercase tracking-[0.28em]"
         style={{ color: GOLD }}
       >
         {children}
       </h3>
-      <span className="h-px flex-1" style={{ backgroundColor: `${GOLD}55` }} />
+      <span className="h-px flex-1" style={{ backgroundColor: 'color-mix(in srgb, var(--theme-accent, #1680ff) 33%, transparent)' }} />
     </div>
   )
 }
@@ -76,15 +79,20 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
     .filter(Boolean)
 
   const status = STATUS_STYLES[form.status] || STATUS_STYLES.AÇIK
+  const isPersonnelDocument = personnelDocumentTypes.has(form.docType)
+  const isInternalAffairs = internalAffairsTypes.has(form.docType)
+  const subjectLabel = isPersonnelDocument ? 'Hakkında İşlem Yapılan Personel' : isInternalAffairs ? 'İlgili Personel / Şahıs' : 'Şüpheli(ler)'
+  const narrativeHeading = isPersonnelDocument ? 'Personel Değerlendirmesi ve Gerekçe' : isInternalAffairs ? 'Soruşturma ve İnceleme Detayları' : 'Detaylı Olay Özeti'
+  const chargesHeading = isPersonnelDocument ? 'İşlem / Tavsiye ve Dayanaklar' : isInternalAffairs ? 'İddialar ve İnceleme Bulguları' : 'Suçlamalar ve İhlaller'
 
   return (
     <div
       ref={ref}
-      style={{ width: 820, backgroundColor: '#0f172a', fontFamily: 'Inter, system-ui, sans-serif' }}
+      style={{ width: 820, backgroundColor: 'var(--theme-document, #0f172a)', fontFamily: 'Inter, system-ui, sans-serif' }}
       className="relative overflow-hidden text-slate-100"
     >
       {}
-      <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: '#1e3a8a' }} />
+      <div className="absolute inset-x-0 top-0 h-1.5" style={{ backgroundColor: 'var(--theme-accent-strong, #1e3a8a)' }} />
       <div className="absolute inset-x-0 h-[3px]" style={{ top: 6, backgroundColor: GOLD }} />
 
       {}
@@ -106,7 +114,7 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
               </p>
               <p className="text-[13px] font-semibold text-slate-300">{ORG.fullName}</p>
               <p className="text-[10px] uppercase tracking-[0.3em]" style={{ color: GOLD }}>
-                Resmî Dosya Belgesi · Gizli
+                {isPersonnelDocument ? 'PERSONEL İŞLEM BELGESİ · GİZLİ' : isInternalAffairs ? 'İÇ DENETİM BELGESİ · GİZLİ' : 'RESMÎ DOSYA BELGESİ · GİZLİ'}
               </p>
               <p className="mt-1 font-display text-3xl font-bold uppercase tracking-wide text-white">
                 {form.docType}
@@ -137,13 +145,13 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
         </div>
 
         {}
-        <Divider>Memur ve Şüpheli Bilgileri</Divider>
+        <Divider>{isPersonnelDocument ? 'Personel ve Dosya Bilgileri' : isInternalAffairs ? 'İnceleme ve Dosya Bilgileri' : 'Memur ve Şüpheli Bilgileri'}</Divider>
         <div className="grid grid-cols-3 gap-2">
           <InfoCell label="Raporlayan Memur" value={form.officerName} />
           <InfoCell label="Rozet #" value={form.badgeNumber} />
           <InfoCell label="Dosya Türü" value={form.docType} />
           <div className="col-span-2">
-            <InfoCell label="Şüpheli(ler)" value={form.suspects} />
+            <InfoCell label={subjectLabel} value={form.suspects} />
           </div>
           <InfoCell label="Durum" value={form.status} />
         </div>
@@ -152,7 +160,7 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
         {form.sectionTitle ? (
           <div
             className="mt-6 border-l-4 px-4 py-2"
-            style={{ borderColor: GOLD, backgroundColor: 'rgba(201, 162, 75, 0.08)' }}
+            style={{ borderColor: GOLD, backgroundColor: 'color-mix(in srgb, var(--theme-accent, #1680ff) 8%, transparent)' }}
           >
             <div
               className="text-[10px] font-bold uppercase tracking-[0.2em]"
@@ -165,13 +173,13 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
         ) : null}
 
         {}
-        <Divider>Detaylı Olay Özeti</Divider>
+        <Divider>{narrativeHeading}</Divider>
         <div className="doc-narrative min-h-[120px] border border-slate-700/70 bg-slate-900/40 p-4 text-[13px] leading-7 text-slate-200">
           {form.narrative || 'Olay özeti girilmedi.'}
         </div>
 
         {}
-        <Divider>Suçlamalar ve İhlaller</Divider>
+        <Divider>{chargesHeading}</Divider>
         {charges.length ? (
           <ol className="space-y-1.5">
             {charges.map((c, i) => (
@@ -198,7 +206,7 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
               <figure
                 key={ev.id}
                 className="border p-2"
-                style={{ borderColor: `${GOLD}40`, backgroundColor: 'rgba(0, 0, 0, 0.25)' }}
+                style={{ borderColor: 'color-mix(in srgb, var(--theme-accent, #1680ff) 25%, transparent)', backgroundColor: 'rgba(0, 0, 0, 0.25)' }}
               >
                 <div
                   className="mb-1 text-[10px] font-bold uppercase tracking-[0.15em]"
@@ -245,7 +253,7 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
               {form.status}
             </div>
             <div className="font-mono text-[10px] text-slate-500">
-              Oluşturulma {new Date().toLocaleString('tr-TR')} · {form.caseId}
+              Oluşturulma {formatTurkeyDateTime()} · {form.caseId}
             </div>
           </div>
 

@@ -11,6 +11,14 @@ export const DOC_TYPES = [
   { value: 'Arama Kararı', label: 'Arama Kararı' },
   { value: 'Delil Kaydı Logu', label: 'Delil Kaydı Logu' },
   { value: 'Suçlu Profili Dosyası', label: 'Suçlu Profili Dosyası' },
+  { value: 'Terfi Tenzil', label: 'Terfi Tenzil' },
+  { value: 'Takdir Belgesi / Övgü', label: 'Takdir Belgesi / Övgü' },
+  { value: 'Personel Değerlendirme', label: 'Personel Değerlendirme' },
+  { value: 'Terfi Tavsiye', label: 'Terfi Tavsiye' },
+  { value: 'Disiplin Soruşturması', label: 'Disiplin Soruşturması' },
+  { value: 'Şikayet Raporu / İhbar', label: 'Şikayet Raporu / İhbar' },
+  { value: 'İç İşleri Soruşturma', label: 'İç İşleri Soruşturma' },
+  { value: 'Soruşturma Süresince Görevden Uzaklaştırma', label: 'Soruşturma Süresince Görevden Uzaklaştırma' },
 ]
 export const STATUS_OPTIONS = [
   { value: 'AÇIK', label: 'AÇIK' },
