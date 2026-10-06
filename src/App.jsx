@@ -77,7 +77,7 @@ export default function App() {
   const canEditCaseFiles = user?.role === 'admin' || ['Dedektif', 'Kıdemli Dedektif'].includes(currentRank) || ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen'].includes(currentRank)
   const canChangeCaseFileStatus = user?.role === 'admin' || ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen'].includes(currentRank)
   const canApproveCaseFiles = canChangeCaseFileStatus
-  const canSendAnnouncements = ['Çavuş', 'Çavuş (Dedektif)', 'Dedektif', 'Kıdemli Çavuş', 'Kıdemli Dedektif', 'Teğmen', 'Kıdemli Teğmen', 'Yüzbaşı', 'Binbaşı', 'Polis Şefi Yardımcısı', 'Polis Şefi'].includes(currentRank)
+  const canSendAnnouncements = user?.role === 'admin' || ['Çavuş', 'Çavuş (Dedektif)', 'Dedektif', 'Kıdemli Çavuş', 'Kıdemli Dedektif', 'Teğmen', 'Kıdemli Teğmen', 'Yüzbaşı', 'Binbaşı', 'Polis Şefi Yardımcısı', 'Polis Şefi'].includes(currentRank)
   const canEditInspectedFile = canEditCaseFiles || String(inspectedFile?.profil_id) === String(user?.id)
 
   useEffect(() => {
