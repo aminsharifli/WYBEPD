@@ -32,6 +32,19 @@ export async function updateCaseFileStatus(id, status) {
   return response.json()
 }
 
+export async function updateCaseFileRecord(id, changes) {
+  const currentResponse = await fetch(`${CASE_FILES_URL}/${id}`)
+  if (!currentResponse.ok) throw responseError(currentResponse)
+  const current = await currentResponse.json()
+  const response = await fetch(`${CASE_FILES_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...current, ...changes }),
+  })
+  if (!response.ok) throw responseError(response)
+  return response.json()
+}
+
 export async function approveCaseFile(id, amirApproval) {
   const response = await fetch(`${CASE_FILES_URL}/${id}`, {
     method: 'PUT',
@@ -98,6 +111,14 @@ export async function toApiCaseFile(form, evidence, profileId) {
     documentType: form.docType,
     status: form.status,
     amirApproval: form.amirApproval || '',
+    rejected: Boolean(form.rejected),
+    rejectedBy: form.rejectedBy || '',
+    rejectedAt: form.rejectedAt || '',
+    rejectionReason: form.rejectionReason || '',
+    issueReport: form.issueReport || '',
+    issueReportedBy: form.issueReportedBy || '',
+    issueReportedAt: form.issueReportedAt || '',
+    activityHistory: Array.isArray(form.activityHistory) ? form.activityHistory : [],
     date: form.date,
     time: form.time,
     officerName: form.officerName,
@@ -139,6 +160,22 @@ export function fromApiCaseFile(file) {
       charges: file.charges || '',
       status: file.status || '',
       amirApproval: file.amirApproval || '',
+      rejected: Boolean(file.rejected),
+      rejectedBy: file.rejectedBy || '',
+      rejectedAt: file.rejectedAt || '',
+      rejectionReason: file.rejectionReason || '',
+      issueReport: file.issueReport || '',
+      issueReportedBy: file.issueReportedBy || '',
+      issueReportedAt: file.issueReportedAt || '',
+      activityHistory: Array.isArray(file.activityHistory) ? file.activityHistory : [],
+      rejected: Boolean(file.rejected),
+      rejectedBy: file.rejectedBy || '',
+      rejectedAt: file.rejectedAt || '',
+      rejectionReason: file.rejectionReason || '',
+      issueReport: file.issueReport || '',
+      issueReportedBy: file.issueReportedBy || '',
+      issueReportedAt: file.issueReportedAt || '',
+      activityHistory: Array.isArray(file.activityHistory) ? file.activityHistory : [],
     },
     evidence,
   }

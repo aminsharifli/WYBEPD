@@ -46,19 +46,21 @@ function SignatureLine({ label, name }) {
   )
 }
 
-function ApprovalSignature({ approved, name }) {
+function ApprovalSignature({ approved, rejected, name }) {
+  const shown = approved || rejected
+  const stampColor = rejected ? '#f87171' : '#34d399'
   return (
     <div>
       <div className="flex h-8 items-end gap-3">
-        {approved && (
+        {shown && (
           <span
             className="rotate-[-7deg] rounded-sm border-[3px] px-2 py-1 text-[11px] font-black uppercase tracking-[0.12em] shadow-[inset_0_0_0_1px_rgba(52,211,153,.35)]"
-            style={{ color: '#34d399', borderColor: '#34d399' }}
+            style={{ color: stampColor, borderColor: stampColor, boxShadow: `inset 0 0 0 1px ${stampColor}55` }}
           >
-            Onaylandı
+            {rejected ? 'Reddedildi' : 'Onaylandı'}
           </span>
         )}
-        {approved && name && <span className="mb-0.5 -rotate-3 whitespace-nowrap text-[17px] italic text-slate-200" style={{ fontFamily: '"Segoe Script", "Brush Script MT", cursive' }}>{name}</span>}
+        {shown && name && <span className="mb-0.5 -rotate-3 whitespace-nowrap text-[17px] italic text-slate-200" style={{ fontFamily: '"Segoe Script", "Brush Script MT", cursive' }}>{name}</span>}
       </div>
       <div className="border-t border-slate-500 pt-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-400">
         Amir Onayı
@@ -223,7 +225,7 @@ const DocumentPreview = forwardRef(function DocumentPreview({ form, evidence }, 
         <div className="mt-10 border-t-2 pt-6" style={{ borderColor: GOLD }}>
           <div className="grid grid-cols-2 gap-10">
             <SignatureLine label="Raporlayan Memur İmzası" name={form.officerName} />
-            <ApprovalSignature approved={Boolean(form.amirApproval)} name={form.amirApproval} />
+            <ApprovalSignature approved={Boolean(form.amirApproval)} rejected={Boolean(form.rejected)} name={form.rejected ? form.rejectedBy : form.amirApproval} />
           </div>
 
           <div className="mt-6 flex items-center justify-between gap-4">

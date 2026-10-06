@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Archive, BookOpen, FilePlus2, Home, LogOut, Menu, Pencil, Radio, Shield, UserRound, Users, X } from 'lucide-react'
+import { Archive, Bell, BookOpen, FilePlus2, Home, LogOut, Menu, Pencil, Radio, Shield, UserRound, Users, X } from 'lucide-react'
 import FormPanel from './components/FormPanel'
 import DocumentPreview from './components/DocumentPreview'
 import RiceBadge from './components/RiceBadge'
@@ -8,7 +8,7 @@ import HomeScreen from './components/HomeScreen'
 import ArchivePanel from './components/ArchivePanel'
 import Toast from './components/Toast'
 import { exportNodeToPng } from './lib/exportImage'
-import { approveCaseFile, deleteCaseFile, fromApiCaseFile, listCaseFiles, saveCaseFile, toApiCaseFile, updateCaseFile, updateCaseFileStatus } from './lib/caseFilesApi'
+import { deleteCaseFile, fromApiCaseFile, listCaseFiles, saveCaseFile, toApiCaseFile, updateCaseFileRecord } from './lib/caseFilesApi'
 import { fileToDataUrl, generateCaseId, nowParts, uid } from './lib/helpers'
 import { DOC_TYPES, STATUS_OPTIONS } from './constants'
 import LoginScreen from './components/LoginScreen'
@@ -19,6 +19,7 @@ import ProfilePanel from './components/ProfilePanel'
 import AdminPanel from './components/AdminPanel'
 import HandbookPanel from './components/HandbookPanel'
 import CodesPanel from './components/CodesPanel'
+import NotificationsPanel from './components/NotificationsPanel'
 
 function createInitialForm() {
   const { date, time } = nowParts()
@@ -47,6 +48,13 @@ export default function App() {
   const [profileTargetId, setProfileTargetId] = useState(null)
   const [profileTargetName, setProfileTargetName] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [seenApprovals, setSeenApprovals] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`pd-seen-approvals-${sessionStorage.getItem('pd-user-id')}`) || '[]') } catch { return [] }
+  })
+  const [notificationSeenAt, setNotificationSeenAt] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(`pd-notification-seen-${sessionStorage.getItem('pd-user-id')}`) || '{}') } catch { return {} }
+  })
   const currentRosterEntry = schema?.roster?.find((item) => item.user_name?.trim().toLocaleLowerCase('tr-TR') === `${user?.firstName || ''} ${user?.lastName || ''}`.trim().toLocaleLowerCase('tr-TR'))
   const currentRank = currentRosterEntry?.rank || ''
   const canEditCaseFiles = user?.role === 'admin' || ['Dedektif', 'Kıdemli Dedektif'].includes(currentRank) || ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen'].includes(currentRank)
@@ -74,6 +82,10 @@ export default function App() {
       setUsers(users)
       const match = users.find((item) => item.firstName?.toLowerCase() === firstName.toLowerCase() && item.lastName?.toLowerCase() === lastName.toLowerCase() && item.password === password)
       if (!match) { setAuthError('Ad, soyad veya şifre hatalı.'); return }
+      try {
+        setSeenApprovals(JSON.parse(localStorage.getItem(`pd-seen-approvals-${match.id}`) || '[]'))
+        setNotificationSeenAt(JSON.parse(localStorage.getItem(`pd-notification-seen-${match.id}`) || '{}'))
+      } catch { setSeenApprovals([]); setNotificationSeenAt({}) }
       sessionStorage.setItem('pd-user-id', match.id); setUser(match)
     } catch (error) { setAuthError(`Giriş yapılamadı: ${error.message}`) }
     finally { setAuthBusy(false) }
@@ -83,13 +95,46 @@ export default function App() {
   useEffect(() => { const a = setTimeout(() => setSplashLeaving(true), 1600), b = setTimeout(() => setShowSplash(false), 2150); return () => { clearTimeout(a); clearTimeout(b) } }, [])
   useEffect(() => { if (!toast) return undefined; const timer = setTimeout(() => setToast(''), 3500); return () => clearTimeout(timer) }, [toast])
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }))
-  const loadArchive = async () => { setArchiveLoading(true); setArchiveError(''); try { setArchive(await listCaseFiles()) } catch (error) { setArchiveError(`Arşiv yüklenemedi: ${error.message}`) } finally { setArchiveLoading(false) } }
+  const loadArchive = async () => { setArchiveLoading(true); setArchiveError(''); try { const files = await listCaseFiles(); setArchive(files); return files } catch (error) { setArchiveError(`Arşiv yüklenemedi: ${error.message}`); return [] } finally { setArchiveLoading(false) } }
+  useEffect(() => {
+    if (!user) return undefined
+    const refreshQuietly = () => { if (document.visibilityState === 'visible') listCaseFiles().then(setArchive).catch(() => {}) }
+    const timer = window.setInterval(refreshQuietly, 5000)
+    window.addEventListener('focus', refreshQuietly)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', refreshQuietly) }
+  }, [user?.id])
   const loadSchema = async () => { setSchemaLoading(true); setSchemaError(''); try { const [nextSchema, nextUsers] = await Promise.all([getSchema(), listUsers()]); setSchema(nextSchema); setUsers(nextUsers); return nextSchema } catch (error) { setSchemaError(`Şema yüklenemedi: ${error.message}`); return null } finally { setSchemaLoading(false) } }
   useEffect(() => { if (user && !schema) loadSchema() }, [user])
+  useEffect(() => { if (user) loadArchive() }, [user])
+  const notifications = useMemo(() => {
+    const items = []
+    for (const file of archive) {
+      const history = Array.isArray(file.activityHistory) ? file.activityHistory : []
+      history.forEach((entry, index) => {
+        const isOwner = String(file.profil_id) === String(user?.id)
+        if (canApproveCaseFiles && !isOwner && entry.type === 'created') items.push({ id: `new-file-${file.id}`, type: 'pending', file, text: `Yeni dosya oluşturuldu: ${file.caseId || file.title || 'Dosya'}`, at: entry.at || file.createdAt })
+        if (isOwner && entry.type === 'approved' && String(entry.actorId) !== String(user?.id)) items.push({ id: `approved-${file.id}-${index}`, type: 'approved', file, text: `Dosyanız onaylandı: ${file.caseId || 'Dosya'}`, at: entry.at })
+        if (isOwner && entry.type === 'rejected' && String(entry.actorId) !== String(user?.id)) items.push({ id: `rejected-${file.id}-${index}`, type: 'rejected', file, text: `Dosyanız reddedildi: ${file.caseId || 'Dosya'}`, at: entry.at })
+        if (isOwner && entry.type === 'issue_reported' && String(entry.actorId) !== String(user?.id)) items.push({ id: `issue-${file.id}-${index}`, type: 'issue', file, text: `${file.caseId || 'Dosya'} için sorun bildirildi`, at: entry.at })
+        const pairedAction = index > 0 && history[index - 1].at === entry.at && ['approved', 'rejected', 'issue_reported'].includes(history[index - 1].type)
+        if (isOwner && entry.type === 'status_changed' && !pairedAction && String(entry.actorId) !== String(user?.id)) items.push({ id: `status-${file.id}-${index}`, type: 'issue', file, text: `${file.caseId || 'Dosya'} durumu değiştirildi`, at: entry.at })
+      })
+    }
+    const now = Date.now()
+    return items.filter((item) => !notificationSeenAt[item.id] || now - notificationSeenAt[item.id] < 60 * 60 * 1000).sort((a, b) => new Date(b.at || 0) - new Date(a.at || 0)).map((item) => ({ ...item, readAt: notificationSeenAt[item.id] || null }))
+  }, [archive, canApproveCaseFiles, notificationSeenAt, user?.id])
+  const unreadNotificationCount = notifications.reduce((count, item) => count + (item.readAt ? 0 : 1), 0)
+  const approvedAnnouncementCount = archive.filter((file) => file.amirApproval && !file.rejected && !seenApprovals.includes(String(file.id))).length
   const navigate = async (next) => {
     setMobileMenuOpen(false)
     setView(next)
-    if (next === 'archive') loadArchive()
+    if (next === 'archive') {
+      const files = await loadArchive()
+      const ids = files.filter((file) => file.amirApproval && !file.rejected).map((file) => String(file.id))
+      const seen = [...new Set([...seenApprovals, ...ids])]
+      setSeenApprovals(seen)
+      localStorage.setItem(`pd-seen-approvals-${user.id}`, JSON.stringify(seen))
+    }
     if (next === 'profile') { setProfileTargetId(String(user?.id || '')); setProfileTargetName('') }
     let currentSchema = schema
     if ((next === 'schema' || next === 'profile' || next === 'create' || next === 'archive') && !currentSchema) currentSchema = await loadSchema()
@@ -126,8 +171,33 @@ export default function App() {
     try {
       const savedForm = user.role === 'admin' || editingId ? form : { ...form, status: 'ONAY BEKLİYOR' }
       const payload = await toApiCaseFile(savedForm, evidence, editingProfileId || user.id)
-      if (editingId) await updateCaseFile(editingId, payload)
-      else await saveCaseFile(payload)
+      if (editingId) {
+        const previous = inspectedFile || archive.find((item) => String(item.id) === String(editingId)) || {}
+        const history = Array.isArray(previous.activityHistory) ? previous.activityHistory : []
+        const now = new Date().toISOString()
+        const issueWasReported = Boolean(previous.issueReport)
+        const nextStatus = issueWasReported ? 'ONAY BEKLİYOR' : payload.status
+        const statusChanged = Boolean(previous.status && previous.status !== nextStatus)
+        const activityHistory = [
+          ...history,
+          { type: 'edited', actor: `${user.firstName} ${user.lastName}`.trim(), actorId: String(user.id), at: now, details: issueWasReported ? 'Sorun bildirimi sonrası dosya düzenlendi.' : 'Dosya güncellendi.' },
+          ...(statusChanged ? [{ type: 'status_changed', actor: `${user.firstName} ${user.lastName}`.trim(), actorId: String(user.id), at: now, details: `Durum ${previous.status || '—'} → ${nextStatus} olarak değiştirildi.` }] : []),
+        ]
+        const changes = {
+          ...payload,
+          createdAt: previous.createdAt || payload.createdAt,
+          activityHistory,
+          ...(issueWasReported ? { issueReport: '', issueReportedBy: '', issueReportedAt: '', rejected: false, rejectedBy: '', rejectedAt: '', rejectionReason: '', amirApproval: '', status: 'ONAY BEKLİYOR' } : {}),
+        }
+        const updated = await updateCaseFileRecord(editingId, changes)
+        setInspectedFile(updated)
+        setArchive((items) => items.map((item) => String(item.id) === String(editingId) ? updated : item))
+        setForm((current) => ({ ...current, ...(issueWasReported ? { issueReport: '', issueReportedBy: '', issueReportedAt: '', rejected: false, rejectedBy: '', rejectedAt: '', rejectionReason: '', amirApproval: '', status: 'ONAY BEKLİYOR' } : {}) }))
+      } else {
+        const now = new Date().toISOString()
+        const created = await saveCaseFile({ ...payload, createdAt: now, activityHistory: [{ type: 'created', actor: `${user.firstName} ${user.lastName}`.trim(), actorId: String(user.id), at: now, details: 'Dosya oluşturuldu.' }] })
+        setArchive((items) => [created, ...items])
+      }
       return true
     } catch (error) {
       if (error.status === 413) {
@@ -149,8 +219,9 @@ export default function App() {
     if (status === file.status) return
     setUpdatingId(file.id)
     try {
-      const updated = await updateCaseFileStatus(file.id, status)
-      setArchive((current) => current.map((item) => item.id === file.id ? { ...item, ...updated, status } : item))
+      const now = new Date().toISOString()
+      const updated = await updateCaseFileRecord(file.id, { status, activityHistory: [...(file.activityHistory || []), { type: 'status_changed', actor: `${user.firstName} ${user.lastName}`.trim(), actorId: String(user.id), at: now, details: `Durum ${file.status || '—'} → ${status} olarak değiştirildi.` }] })
+      setArchive((current) => current.map((item) => item.id === file.id ? updated : item))
       setToast('Dosya durumu güncellendi!')
     } catch (error) {
       alert(`Dosya durumu güncellenemedi: ${error.message}`)
@@ -158,16 +229,50 @@ export default function App() {
       setUpdatingId(null)
     }
   }
-  const approveArchivedCaseFile = async (file) => {
-    if (!canApproveCaseFiles || file.amirApproval) return
+  const recordApprovalAction = async (file, action, details = '') => {
+    if (!canApproveCaseFiles) return
     setUpdatingId(file.id)
-    const approver = `${user.firstName || ''} ${user.lastName || ''}`.trim()
+    const actor = `${user.firstName || ''} ${user.lastName || ''}`.trim()
+    const now = new Date().toISOString()
+    const history = Array.isArray(file.activityHistory) ? file.activityHistory : []
+    let changes
+    if (action === 'approve') {
+      if (file.amirApproval || file.rejected) return setUpdatingId(null)
+      changes = { amirApproval: actor, approvedAt: now, rejected: false, status: 'AÇIK', issueReport: '', issueReportedBy: '', issueReportedAt: '', activityHistory: [...history, { type: 'approved', actor, actorId: String(user.id), at: now, details: 'Dosya onaylandı.' }, ...(file.status !== 'AÇIK' ? [{ type: 'status_changed', actor, actorId: String(user.id), at: now, details: `Durum ${file.status || '—'} → AÇIK olarak değiştirildi.` }] : [])] }
+    } else if (action === 'reject') {
+      if (file.amirApproval || file.rejected) return setUpdatingId(null)
+      changes = { amirApproval: '', rejected: true, rejectedBy: actor, rejectedAt: now, rejectionReason: details.trim(), status: 'REDDEDİLDİ', issueReport: '', issueReportedBy: '', issueReportedAt: '', activityHistory: [...history, { type: 'rejected', actor, actorId: String(user.id), at: now, details: details.trim() || 'Dosya gerekçe belirtilmeden reddedildi.' }, ...(file.status !== 'REDDEDİLDİ' ? [{ type: 'status_changed', actor, actorId: String(user.id), at: now, details: `Durum ${file.status || '—'} → REDDEDİLDİ olarak değiştirildi.` }] : [])] }
+    } else {
+      changes = { amirApproval: '', approvedAt: '', rejected: false, rejectedBy: '', rejectedAt: '', rejectionReason: '', issueReport: details.trim(), issueReportedBy: actor, issueReportedAt: now, status: 'SORUN BİLDİRİLDİ', activityHistory: [...history, { type: 'issue_reported', actor, actorId: String(user.id), at: now, details: details.trim() || 'Sorun için açıklama girilmedi.' }, ...(file.status !== 'SORUN BİLDİRİLDİ' ? [{ type: 'status_changed', actor, actorId: String(user.id), at: now, details: `Durum ${file.status || '—'} → SORUN BİLDİRİLDİ olarak değiştirildi.` }] : [])] }
+    }
     try {
-      const updated = await approveCaseFile(file.id, approver)
-      setArchive((current) => current.map((item) => String(item.id) === String(file.id) ? { ...item, ...updated, amirApproval: approver } : item))
-      setToast('Dosya amir tarafından onaylandı.')
-    } catch (error) { alert(`Dosya onaylanamadı: ${error.message}`) }
+      const updated = await updateCaseFileRecord(file.id, changes)
+      setArchive((current) => current.map((item) => String(item.id) === String(file.id) ? updated : item))
+      if (action === 'approve') {
+        const seen = [...new Set([...seenApprovals, String(file.id)])]
+        setSeenApprovals(seen)
+        try { localStorage.setItem(`pd-seen-approvals-${user.id}`, JSON.stringify(seen)) } catch {}
+      }
+      setToast(action === 'approve' ? 'Dosya onaylandı; dosya sahibine bildirim gönderildi.' : action === 'reject' ? 'Dosya reddedildi; dosya sahibine bildirim gönderildi.' : 'Sorun bildirildi; dosya sahibine bildirim gönderildi.')
+      return true
+    } catch (error) { alert(`İşlem tamamlanamadı: ${error.message}`); return false }
     finally { setUpdatingId(null) }
+  }
+  const openNotification = (item) => {
+    setNotificationSeenAt((current) => {
+      if (current[item.id]) return current
+      const next = { ...current, [item.id]: Date.now() }
+      try { localStorage.setItem(`pd-notification-seen-${user.id}`, JSON.stringify(next)) } catch {}
+      return next
+    })
+    if (item.type === 'approved') {
+      const seen = [...new Set([...seenApprovals, String(item.file.id)])]
+      setSeenApprovals(seen)
+      try { localStorage.setItem(`pd-seen-approvals-${user.id}`, JSON.stringify(seen)) } catch {}
+    }
+    setNotificationsOpen(false)
+    if (item.type === 'pending') navigate('archive')
+    else openCaseFile(item.file)
   }
 
   if (!user) return <><LoginScreen onLogin={login} busy={authBusy} error={authError} />{showSplash && <SplashScreen leaving={splashLeaving} />}</>
@@ -178,8 +283,8 @@ export default function App() {
     <header className="site-header"><div className="site-header-inner">
       <button onClick={() => navigate('home')} className="site-brand"><RiceBadge className="h-14 w-14 shrink-0" /><span><strong>WYBE - <em>LSPD</em></strong><small>LOS SANTOS POLICE DEPARTMENT</small></span></button>
       <button type="button" className="mobile-menu-toggle" aria-label={mobileMenuOpen ? 'Menyunu bağla' : 'Menyunu aç'} aria-expanded={mobileMenuOpen} aria-controls="main-navigation" onClick={() => setMobileMenuOpen((open) => !open)}>{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
-      <nav id="main-navigation" className={`site-nav${mobileMenuOpen ? ' is-open' : ''}`} aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['codes', Radio, 'Kodlar'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={view === id ? 'selected' : ''}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</nav>
-      <div className="account-actions"><button type="button" onClick={() => navigate('profile')} className={`account-profile ${view === 'profile' ? 'selected' : ''}`}><span className="account-avatar"><UserRound className="h-4 w-4" /></span><span className="account-profile-copy"><strong>{user.firstName} {user.lastName}</strong><small>{currentRosterEntry?.rank || (user.role === 'admin' ? 'Yönetici' : 'Akademi Öğrencisi')} · Rozet {currentRosterEntry?.badge_number || '—'}</small></span></button><button title="Çıkış yap" onClick={() => { sessionStorage.removeItem('pd-user-id'); setUser(null); setView('home') }} className="account-logout"><LogOut className="h-4 w-4" /></button></div>
+      <nav id="main-navigation" className={`site-nav${mobileMenuOpen ? ' is-open' : ''}`} aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['codes', Radio, 'Kodlar'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={view === id ? 'selected' : ''}><Icon className="h-4 w-4" /><span>{label}{id === 'archive' && approvedAnnouncementCount > 0 && <b className="nav-notification-badge">{approvedAnnouncementCount}</b>}</span></button>)}</nav>
+      <div className="account-actions"><button type="button" onClick={() => setNotificationsOpen((open) => !open)} aria-label="Bildirimleri aç" aria-expanded={notificationsOpen} className="notification-toggle"><Bell className="h-5 w-5" />{unreadNotificationCount > 0 && <b>{unreadNotificationCount > 99 ? '99+' : unreadNotificationCount}</b>}</button>{notificationsOpen && <NotificationsPanel items={notifications} onClose={() => setNotificationsOpen(false)} onOpen={openNotification} />}<button type="button" onClick={() => navigate('profile')} className={`account-profile ${view === 'profile' ? 'selected' : ''}`}><span className="account-avatar"><UserRound className="h-4 w-4" /></span><span className="account-profile-copy"><strong>{user.firstName} {user.lastName}</strong><small>{currentRosterEntry?.rank || (user.role === 'admin' ? 'Yönetici' : 'Akademi Öğrencisi')} · Rozet {currentRosterEntry?.badge_number || '—'}</small></span></button><button title="Çıkış yap" onClick={() => { sessionStorage.removeItem('pd-user-id'); setUser(null); setView('home') }} className="account-logout"><LogOut className="h-4 w-4" /></button></div>
     </div></header>
     {view === 'home' && <HomeScreen onNavigate={navigate} />}
     {view === 'handbook' && <HandbookPanel />}
@@ -187,8 +292,8 @@ export default function App() {
     {view === 'admin' && user.role === 'admin' && <AdminPanel users={users} currentUserId={user.id} onCreateUser={createManagedUser} onDeleteUser={removeManagedUser} onUsersRefresh={async () => setUsers(await listUsers())} />}
     {view === 'schema' && <SchemaPanel schema={schema} loading={schemaLoading} error={schemaError} onRefresh={loadSchema} onAdd={addSchemaMember} onUpdate={editSchemaMember} onDelete={removeSchemaMember} onOpenProfile={openProfile} users={users} currentUser={user} isAdmin={user.role === 'admin'} />}
     {view === 'profile' && <ProfilePanel users={users} currentUser={user} profileUserId={profileTargetId || user.id} profileName={profileTargetName} onOpenProfile={openProfile} onOpenCaseFile={openCaseFile} schema={schema} schemaLoading={schemaLoading} onChangePassword={changePassword} />}
-    {view === 'archive' && <ArchivePanel files={archive} loading={archiveLoading} error={archiveError} onRefresh={loadArchive} onOpen={openCaseFile} onDelete={removeCaseFile} onStatusChange={changeCaseFileStatus} onApprove={approveArchivedCaseFile} deletingId={deletingId} updatingId={updatingId} isAdmin={user.role === 'admin'} canChangeStatus={canChangeCaseFileStatus} canApprove={canApproveCaseFiles} />}
-    {view === 'inspect' && <main className="mx-auto max-w-[1000px] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1680ff]">Dosya İnceleme</p><h2 className="mt-1 text-xl font-bold text-white">{form.caseId || 'Dosya'}</h2></div>{canEditInspectedFile && <button onClick={() => setView('create')} className="inline-flex items-center gap-2 rounded-md border border-[#1680ff]/60 bg-[#1680ff]/10 px-4 py-2 text-sm font-bold text-[#1680ff] transition hover:bg-[#1680ff]/20"><Pencil className="h-4 w-4" /> Düzenle</button>}</div><section className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 sm:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview form={form} evidence={evidence} /></div></section></main>}
+    {view === 'archive' && <ArchivePanel files={archive} loading={archiveLoading} error={archiveError} onRefresh={loadArchive} onOpen={openCaseFile} onDelete={removeCaseFile} onStatusChange={changeCaseFileStatus} onAction={recordApprovalAction} deletingId={deletingId} updatingId={updatingId} isAdmin={user.role === 'admin'} canChangeStatus={canChangeCaseFileStatus} canApprove={canApproveCaseFiles} />}
+    {view === 'inspect' && <main className="mx-auto max-w-[1500px] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1680ff]">Dosya İnceleme</p><h2 className="mt-1 text-xl font-bold text-white">{form.caseId || 'Dosya'}</h2></div>{canEditInspectedFile && <button onClick={() => setView('create')} className="inline-flex items-center gap-2 rounded-md border border-[#1680ff]/60 bg-[#1680ff]/10 px-4 py-2 text-sm font-bold text-[#1680ff] transition hover:bg-[#1680ff]/20"><Pencil className="h-4 w-4" /> Düzenle</button>}</div><div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_310px]"><section className="min-w-0 overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 sm:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview form={form} evidence={evidence} /></div></section><aside className="space-y-4"><section className="rounded-xl border border-slate-800 bg-[#0d1626] p-5"><h3 className="font-bold text-white">Dosya notları</h3>{form.rejected && <div className="mt-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3"><p className="text-xs font-bold uppercase tracking-wider text-red-300">Reddetme nedeni · {form.rejectedBy || 'Yetkili'} · {form.rejectedAt ? new Date(form.rejectedAt).toLocaleString('tr-TR') : ''}</p><p className="mt-2 whitespace-pre-wrap text-sm text-red-100">{form.rejectionReason || 'Gerekçe belirtilmedi.'}</p></div>}{form.issueReport && <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3"><p className="text-xs font-bold uppercase tracking-wider text-amber-300">Bildirilen sorun · {form.issueReportedBy || 'Yetkili'} · {form.issueReportedAt ? new Date(form.issueReportedAt).toLocaleString('tr-TR') : ''}</p><p className="mt-2 whitespace-pre-wrap text-sm text-amber-100">{form.issueReport}</p></div>}{!form.rejected && !form.issueReport && <p className="mt-3 text-sm text-slate-500">Bu dosyada ek not bulunmuyor.</p>}</section><section className="rounded-xl border border-slate-800 bg-[#0d1626] p-5"><h3 className="font-bold text-white">İşlem geçmişi</h3><div className="mt-4 space-y-4">{(inspectedFile?.activityHistory || []).length ? [...inspectedFile.activityHistory].reverse().map((entry, index) => <div key={`${entry.at}-${index}`} className="border-l-2 border-slate-700 pl-3"><p className="text-sm font-semibold text-slate-200">{entry.details || entry.type}</p><p className="mt-1 text-xs text-slate-400">{entry.actor || 'Bilinmeyen kullanıcı'} · {entry.at ? new Date(entry.at).toLocaleString('tr-TR') : 'Tarih yok'}</p></div>) : <p className="text-sm text-slate-500">Henüz işlem kaydı yok.</p>}</div></section></aside></div></main>}
     {view === 'create' && <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 p-4 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:p-6"><FormPanel form={form} setField={setField} onRegenerateId={() => setField('caseId', generateCaseId())} evidence={evidence} addFiles={addFiles} updateCaption={(id, caption) => setEvidence((current) => current.map((item) => item.id === id ? { ...item, caption } : item))} removeEvidence={(id) => setEvidence((current) => current.filter((item) => item.id !== id))} onDownload={handleDownload} onSave={handleSave} onNewFile={startNewFile} busy={busy} saving={saving} clearAfterSave={clearAfterSave} setClearAfterSave={setClearAfterSave} isEditing={Boolean(editingId)} canChangeStatus={canChangeCaseFileStatus} /><section className="min-w-0"><div className="mb-3 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">CANLI ÖNİZLEME</span><span className="text-[11px] text-slate-500">~2460 px genişlik · PNG · 3×</span></div><div className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 lg:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview ref={previewRef} form={form} evidence={evidence} /></div></div></section></main>}
   </div>
 }

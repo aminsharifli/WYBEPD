@@ -23,6 +23,8 @@ export const STATUS_STYLES = {
   KAPALI: { text: '#f87171', border: '#f87171', bg: 'rgba(248, 113, 113, 0.12)' },
   'SORUŞTURMA SÜRÜYOR': { text: '#fbbf24', border: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)' },
   'ONAY BEKLİYOR': { text: '#60a5fa', border: '#60a5fa', bg: 'rgba(96, 165, 250, 0.12)' },
+  'SORUN BİLDİRİLDİ': { text: '#fbbf24', border: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)' },
+  REDDEDİLDİ: { text: '#f87171', border: '#f87171', bg: 'rgba(248, 113, 113, 0.12)' },
 }
 
 export const UNIT_LABELS = {
