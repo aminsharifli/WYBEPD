@@ -225,6 +225,44 @@ body { background: #06101f; }
 .app-shell[data-theme] tr[class*="border-l-sky-"],
 .app-shell[data-theme] tr[class*="border-l-[#1680ff]"] { border-left-color:var(--theme-accent)!important; }
 
+/* Archive and schema use lighter glass surfaces to keep their dense data readable. */
+.app-shell[data-theme] .schema-page > section:first-child {
+  border-color:color-mix(in srgb,var(--theme-accent) 28%,transparent)!important;
+  background:linear-gradient(125deg,color-mix(in srgb,var(--theme-accent) 10%,transparent),color-mix(in srgb,var(--theme-panel) 44%,transparent))!important;
+  backdrop-filter:blur(16px);
+}
+.app-shell[data-theme] .schema-page > div.grid > div,
+.app-shell[data-theme] .schema-page > div[class*="rounded-2xl"]:not(.schema-table-shell) {
+  border-color:color-mix(in srgb,var(--theme-accent) 17%,transparent)!important;
+  background-color:color-mix(in srgb,var(--theme-panel) 36%,transparent)!important;
+  backdrop-filter:blur(12px);
+}
+.app-shell[data-theme] .schema-table-shell,
+.app-shell[data-theme] .archive-table-shell {
+  border-color:color-mix(in srgb,var(--theme-accent) 23%,transparent)!important;
+  background-color:color-mix(in srgb,var(--theme-panel) 32%,transparent)!important;
+  box-shadow:0 18px 50px rgba(0,0,0,.12)!important;
+  backdrop-filter:blur(14px);
+}
+.app-shell[data-theme] .schema-table-shell thead,
+.app-shell[data-theme] .archive-table-shell thead {
+  border-color:color-mix(in srgb,var(--theme-accent) 20%,transparent)!important;
+  background-color:color-mix(in srgb,var(--theme-surface) 48%,transparent)!important;
+}
+.app-shell[data-theme] .schema-table-shell tbody,
+.app-shell[data-theme] .archive-table-shell tbody { border-color:color-mix(in srgb,var(--theme-border) 52%,transparent)!important; }
+.app-shell[data-theme] .schema-table-shell tbody tr,
+.app-shell[data-theme] .archive-table-shell tbody tr { background-color:transparent!important; }
+.app-shell[data-theme] .schema-table-shell tbody tr:nth-child(even),
+.app-shell[data-theme] .archive-table-shell tbody tr:nth-child(even) { background-color:color-mix(in srgb,var(--theme-panel) 22%,transparent)!important; }
+.app-shell[data-theme] .schema-page tr[class*="from-sky-"],
+.app-shell[data-theme] .schema-page tr[class*="from-violet-"] {
+  background-image:linear-gradient(90deg,color-mix(in srgb,var(--theme-accent) 9%,transparent),transparent 72%)!important;
+}
+.app-shell[data-theme] .schema-table-shell tbody tr:hover,
+.app-shell[data-theme] .archive-table-shell tbody tr:hover { background-color:color-mix(in srgb,var(--theme-accent) 8%,transparent)!important; }
+.app-shell[data-theme] .archive-page input { background-color:color-mix(in srgb,var(--theme-panel) 44%,transparent)!important; }
+
 /* Mobile navigation and viewport fit */
 html, body, #root { max-width:100%; }
 body { overflow-x:clip; }
@@ -264,3 +302,46 @@ body { overflow-x:clip; }
 .app-shell[data-theme] .announcement-toggle,
 .app-shell[data-theme] .account-logout,
 .app-shell[data-theme] .mobile-menu-toggle { color:var(--theme-accent); }
+.app-shell[data-theme] [class*="hover:bg-slate-"]:hover,
+.app-shell[data-theme] [class*="hover:bg-white/"]:hover,
+.app-shell[data-theme] [class*="hover:bg-sky-"]:not([class~="bg-sky-500"]):not([class~="bg-sky-600"]):hover,
+.app-shell[data-theme] [class*="hover:bg-blue-"]:not([class~="bg-blue-500"]):not([class~="bg-blue-600"]):hover,
+.app-shell[data-theme] [class*="hover:bg-violet-"]:hover,
+.app-shell[data-theme] [class*="hover:bg-amber-"]:hover,
+.app-shell[data-theme] [class*="hover:bg-emerald-"]:hover {
+  background-color:color-mix(in srgb,var(--theme-accent) 15%,var(--theme-panel))!important;
+}
+.app-shell[data-theme] [class*="hover:border-slate-"]:hover,
+.app-shell[data-theme] [class*="hover:border-sky-"]:hover,
+.app-shell[data-theme] [class*="hover:border-blue-"]:hover,
+.app-shell[data-theme] [class*="hover:border-violet-"]:hover,
+.app-shell[data-theme] [class*="hover:border-amber-"]:hover,
+.app-shell[data-theme] [class*="hover:border-emerald-"]:hover { border-color:var(--theme-accent)!important; }
+.app-shell[data-theme] [class*="hover:text-sky-"]:hover,
+.app-shell[data-theme] [class*="hover:text-blue-"]:hover,
+.app-shell[data-theme] [class*="hover:text-violet-"]:hover,
+.app-shell[data-theme] [class*="hover:text-amber-"]:hover,
+.app-shell[data-theme] [class*="hover:text-emerald-"]:hover { color:var(--theme-accent)!important; }
+.app-shell[data-theme] .group:hover [class*="group-hover:text-sky-"],
+.app-shell[data-theme] .group:hover [class*="group-hover:text-blue-"],
+.app-shell[data-theme] .group:hover [class*="group-hover:text-violet-"] { color:var(--theme-accent)!important; }
+.app-shell[data-theme] .site-nav button:hover,
+.app-shell[data-theme] .account-profile:hover,
+.app-shell[data-theme] .account-logout:hover,
+.app-shell[data-theme] .notification-toggle:hover,
+.app-shell[data-theme] .announcement-toggle:hover,
+.app-shell[data-theme] .mobile-menu-toggle:hover,
+.app-shell[data-theme] .hero-arrow:hover,
+.app-shell[data-theme] .home-shortcuts button:hover,
+.app-shell[data-theme] .notification-panel>header button:hover,
+.app-shell[data-theme] .header-popover>header>button:hover,
+.app-shell[data-theme] .announcement-mention:hover,
+.app-shell[data-theme] .announcement-read-button:hover { color:var(--theme-accent)!important; }
+.app-shell[data-theme] .site-nav button:hover,
+.app-shell[data-theme] .account-profile:hover,
+.app-shell[data-theme] .account-logout:hover,
+.app-shell[data-theme] .notification-toggle:hover,
+.app-shell[data-theme] .announcement-toggle:hover,
+.app-shell[data-theme] .mobile-menu-toggle:hover,
+.app-shell[data-theme] .hero-arrow:hover,
+.app-shell[data-theme] .home-shortcuts button:hover { border-color:var(--theme-accent)!important; }
