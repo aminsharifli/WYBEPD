@@ -8,7 +8,7 @@ import HomeScreen from './components/HomeScreen'
 import ArchivePanel from './components/ArchivePanel'
 import Toast from './components/Toast'
 import { exportNodeToPng } from './lib/exportImage'
-import { deleteCaseFile, fromApiCaseFile, listCaseFiles, saveCaseFile, toApiCaseFile, updateCaseFile, updateCaseFileStatus } from './lib/caseFilesApi'
+import { approveCaseFile, deleteCaseFile, fromApiCaseFile, listCaseFiles, saveCaseFile, toApiCaseFile, updateCaseFile, updateCaseFileStatus } from './lib/caseFilesApi'
 import { fileToDataUrl, generateCaseId, nowParts, uid } from './lib/helpers'
 import { DOC_TYPES, STATUS_OPTIONS } from './constants'
 import LoginScreen from './components/LoginScreen'
@@ -34,6 +34,7 @@ export default function App() {
   const [updatingId, setUpdatingId] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [editingProfileId, setEditingProfileId] = useState(null)
+  const [inspectedFile, setInspectedFile] = useState(null)
   const [toast, setToast] = useState(''), [clearAfterSave, setClearAfterSave] = useState(false)
   const previewRef = useRef(null)
   const [user, setUser] = useState(null)
@@ -50,6 +51,8 @@ export default function App() {
   const currentRank = currentRosterEntry?.rank || ''
   const canEditCaseFiles = user?.role === 'admin' || ['Dedektif', 'Kıdemli Dedektif'].includes(currentRank) || ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen'].includes(currentRank)
   const canChangeCaseFileStatus = user?.role === 'admin' || ['Polis Şefi', 'Polis Şefi Yardımcısı', 'Binbaşı', 'Yüzbaşı', 'Kıdemli Teğmen', 'Teğmen'].includes(currentRank)
+  const canApproveCaseFiles = canChangeCaseFileStatus
+  const canEditInspectedFile = canEditCaseFiles || String(inspectedFile?.profil_id) === String(user?.id)
 
   useEffect(() => {
     let active = true
@@ -82,6 +85,7 @@ export default function App() {
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const loadArchive = async () => { setArchiveLoading(true); setArchiveError(''); try { setArchive(await listCaseFiles()) } catch (error) { setArchiveError(`Arşiv yüklenemedi: ${error.message}`) } finally { setArchiveLoading(false) } }
   const loadSchema = async () => { setSchemaLoading(true); setSchemaError(''); try { const [nextSchema, nextUsers] = await Promise.all([getSchema(), listUsers()]); setSchema(nextSchema); setUsers(nextUsers); return nextSchema } catch (error) { setSchemaError(`Şema yüklenemedi: ${error.message}`); return null } finally { setSchemaLoading(false) } }
+  useEffect(() => { if (user && !schema) loadSchema() }, [user])
   const navigate = async (next) => {
     setMobileMenuOpen(false)
     setView(next)
@@ -138,7 +142,7 @@ export default function App() {
   }
   const handleSave = async () => { const saved = await saveToSystem(); if (!saved) return; setToast(editingId ? 'Dosya başarıyla güncellendi!' : 'Dosya sisteme kaydedildi!'); if (clearAfterSave) startNewFile() }
   const handleDownload = async () => { const saved = await saveToSystem(); if (!saved) return; setBusy(true); try { await exportNodeToPng(previewRef.current, `${form.caseId || 'LSPD-DOSYA'}.png`); setToast('Dosya indirildi!') } catch (error) { console.error(error); alert('PNG oluşturulurken bir hata oluştu.') } finally { setBusy(false) } }
-  const openCaseFile = (file) => { const loaded = fromApiCaseFile(file); setForm(loaded.form); setEvidence(loaded.evidence); setEditingId(file.id); setEditingProfileId(file.profil_id || null); setView('inspect') }
+  const openCaseFile = (file) => { const loaded = fromApiCaseFile(file); setForm(loaded.form); setEvidence(loaded.evidence); setEditingId(file.id); setEditingProfileId(file.profil_id || null); setInspectedFile(file); setView('inspect') }
   const removeCaseFile = async (file) => { if (!window.confirm(`${file.caseId || 'Bu dosya'} kalıcı olarak silinsin mi?`)) return; setDeletingId(file.id); try { await deleteCaseFile(file.id); setArchive((current) => current.filter((item) => item.id !== file.id)) } catch (error) { alert(`Dosya silinemedi: ${error.message}`) } finally { setDeletingId(null) } }
   const changeCaseFileStatus = async (file, status) => {
     if (!canChangeCaseFileStatus) return
@@ -154,6 +158,17 @@ export default function App() {
       setUpdatingId(null)
     }
   }
+  const approveArchivedCaseFile = async (file) => {
+    if (!canApproveCaseFiles || file.amirApproval) return
+    setUpdatingId(file.id)
+    const approver = `${user.firstName || ''} ${user.lastName || ''}`.trim()
+    try {
+      const updated = await approveCaseFile(file.id, approver)
+      setArchive((current) => current.map((item) => String(item.id) === String(file.id) ? { ...item, ...updated, amirApproval: approver } : item))
+      setToast('Dosya amir tarafından onaylandı.')
+    } catch (error) { alert(`Dosya onaylanamadı: ${error.message}`) }
+    finally { setUpdatingId(null) }
+  }
 
   if (!user) return <><LoginScreen onLogin={login} busy={authBusy} error={authError} />{showSplash && <SplashScreen leaving={splashLeaving} />}</>
 
@@ -164,7 +179,7 @@ export default function App() {
       <button onClick={() => navigate('home')} className="site-brand"><RiceBadge className="h-14 w-14 shrink-0" /><span><strong>WYBE - <em>LSPD</em></strong><small>LOS SANTOS POLICE DEPARTMENT</small></span></button>
       <button type="button" className="mobile-menu-toggle" aria-label={mobileMenuOpen ? 'Menyunu bağla' : 'Menyunu aç'} aria-expanded={mobileMenuOpen} aria-controls="main-navigation" onClick={() => setMobileMenuOpen((open) => !open)}>{mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
       <nav id="main-navigation" className={`site-nav${mobileMenuOpen ? ' is-open' : ''}`} aria-label="Ana gezinme">{[['home', Home, 'Ana Sayfa'], ['create', FilePlus2, 'Dosya Oluştur'], ['archive', Archive, 'Arşiv'], ['schema', Users, 'Şema'], ['codes', Radio, 'Kodlar'], ['handbook', BookOpen, 'El Kitapçığı'], ...(user.role === 'admin' ? [['admin', Shield, 'Yönetim']] : [])].map(([id, Icon, label]) => <button key={id} onClick={() => navigate(id)} className={view === id ? 'selected' : ''}><Icon className="h-4 w-4" /><span>{label}</span></button>)}</nav>
-      <div className="account-actions"><span className="account-label">{user.firstName} · {user.role === 'admin' ? 'Yönetici' : 'Kullanıcı'}</span><button type="button" onClick={() => navigate('profile')} className={`account-profile ${view === 'profile' ? 'selected' : ''}`}><UserRound className="h-4 w-4" /><span>Profil</span></button><button title="Çıkış yap" onClick={() => { sessionStorage.removeItem('pd-user-id'); setUser(null); setView('home') }} className="account-logout"><LogOut className="h-4 w-4" /></button></div>
+      <div className="account-actions"><button type="button" onClick={() => navigate('profile')} className={`account-profile ${view === 'profile' ? 'selected' : ''}`}><span className="account-avatar"><UserRound className="h-4 w-4" /></span><span className="account-profile-copy"><strong>{user.firstName} {user.lastName}</strong><small>{currentRosterEntry?.rank || (user.role === 'admin' ? 'Yönetici' : 'Akademi Öğrencisi')} · Rozet {currentRosterEntry?.badge_number || '—'}</small></span></button><button title="Çıkış yap" onClick={() => { sessionStorage.removeItem('pd-user-id'); setUser(null); setView('home') }} className="account-logout"><LogOut className="h-4 w-4" /></button></div>
     </div></header>
     {view === 'home' && <HomeScreen onNavigate={navigate} />}
     {view === 'handbook' && <HandbookPanel />}
@@ -172,8 +187,8 @@ export default function App() {
     {view === 'admin' && user.role === 'admin' && <AdminPanel users={users} currentUserId={user.id} onCreateUser={createManagedUser} onDeleteUser={removeManagedUser} onUsersRefresh={async () => setUsers(await listUsers())} />}
     {view === 'schema' && <SchemaPanel schema={schema} loading={schemaLoading} error={schemaError} onRefresh={loadSchema} onAdd={addSchemaMember} onUpdate={editSchemaMember} onDelete={removeSchemaMember} onOpenProfile={openProfile} users={users} currentUser={user} isAdmin={user.role === 'admin'} />}
     {view === 'profile' && <ProfilePanel users={users} currentUser={user} profileUserId={profileTargetId || user.id} profileName={profileTargetName} onOpenProfile={openProfile} onOpenCaseFile={openCaseFile} schema={schema} schemaLoading={schemaLoading} onChangePassword={changePassword} />}
-    {view === 'archive' && <ArchivePanel files={archive} loading={archiveLoading} error={archiveError} onRefresh={loadArchive} onOpen={openCaseFile} onDelete={removeCaseFile} onStatusChange={changeCaseFileStatus} deletingId={deletingId} updatingId={updatingId} isAdmin={user.role === 'admin'} canChangeStatus={canChangeCaseFileStatus} />}
-    {view === 'inspect' && <main className="mx-auto max-w-[1000px] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1680ff]">Dosya İnceleme</p><h2 className="mt-1 text-xl font-bold text-white">{form.caseId || 'Dosya'}</h2></div>{canEditCaseFiles && <button onClick={() => setView('create')} className="inline-flex items-center gap-2 rounded-md border border-[#1680ff]/60 bg-[#1680ff]/10 px-4 py-2 text-sm font-bold text-[#1680ff] transition hover:bg-[#1680ff]/20"><Pencil className="h-4 w-4" /> Düzenle</button>}</div><section className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 sm:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview form={form} evidence={evidence} /></div></section></main>}
+    {view === 'archive' && <ArchivePanel files={archive} loading={archiveLoading} error={archiveError} onRefresh={loadArchive} onOpen={openCaseFile} onDelete={removeCaseFile} onStatusChange={changeCaseFileStatus} onApprove={approveArchivedCaseFile} deletingId={deletingId} updatingId={updatingId} isAdmin={user.role === 'admin'} canChangeStatus={canChangeCaseFileStatus} canApprove={canApproveCaseFiles} />}
+    {view === 'inspect' && <main className="mx-auto max-w-[1000px] p-4 sm:p-6"><div className="mb-4 flex items-center justify-between gap-4"><div><p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#1680ff]">Dosya İnceleme</p><h2 className="mt-1 text-xl font-bold text-white">{form.caseId || 'Dosya'}</h2></div>{canEditInspectedFile && <button onClick={() => setView('create')} className="inline-flex items-center gap-2 rounded-md border border-[#1680ff]/60 bg-[#1680ff]/10 px-4 py-2 text-sm font-bold text-[#1680ff] transition hover:bg-[#1680ff]/20"><Pencil className="h-4 w-4" /> Düzenle</button>}</div><section className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 sm:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview form={form} evidence={evidence} /></div></section></main>}
     {view === 'create' && <main className="mx-auto grid max-w-[1600px] grid-cols-1 gap-6 p-4 lg:grid-cols-[minmax(0,440px)_minmax(0,1fr)] lg:p-6"><FormPanel form={form} setField={setField} onRegenerateId={() => setField('caseId', generateCaseId())} evidence={evidence} addFiles={addFiles} updateCaption={(id, caption) => setEvidence((current) => current.map((item) => item.id === id ? { ...item, caption } : item))} removeEvidence={(id) => setEvidence((current) => current.filter((item) => item.id !== id))} onDownload={handleDownload} onSave={handleSave} onNewFile={startNewFile} busy={busy} saving={saving} clearAfterSave={clearAfterSave} setClearAfterSave={setClearAfterSave} isEditing={Boolean(editingId)} canChangeStatus={canChangeCaseFileStatus} /><section className="min-w-0"><div className="mb-3 flex items-center justify-between"><span className="text-[11px] font-semibold uppercase tracking-[0.25em] text-slate-400">CANLI ÖNİZLEME</span><span className="text-[11px] text-slate-500">~2460 px genişlik · PNG · 3×</span></div><div className="overflow-auto rounded-lg border border-slate-800 bg-[#060a12] p-4 lg:p-8" style={{ backgroundImage: 'radial-gradient(#141c2c 1px, transparent 1px)', backgroundSize: '18px 18px' }}><div className="mx-auto w-fit"><DocumentPreview ref={previewRef} form={form} evidence={evidence} /></div></div></section></main>}
   </div>
 }

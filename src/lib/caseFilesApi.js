@@ -32,6 +32,16 @@ export async function updateCaseFileStatus(id, status) {
   return response.json()
 }
 
+export async function approveCaseFile(id, amirApproval) {
+  const response = await fetch(`${CASE_FILES_URL}/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amirApproval }),
+  })
+  if (!response.ok) throw responseError(response)
+  return response.json()
+}
+
 export async function updateCaseFile(id, payload) {
   const response = await fetch(`${CASE_FILES_URL}/${id}`, {
     method: 'PUT',
@@ -87,6 +97,7 @@ export async function toApiCaseFile(form, evidence, profileId) {
     caseId: form.caseId,
     documentType: form.docType,
     status: form.status,
+    amirApproval: form.amirApproval || '',
     date: form.date,
     time: form.time,
     officerName: form.officerName,
@@ -127,6 +138,7 @@ export function fromApiCaseFile(file) {
       narrative: file.narrative || '',
       charges: file.charges || '',
       status: file.status || '',
+      amirApproval: file.amirApproval || '',
     },
     evidence,
   }

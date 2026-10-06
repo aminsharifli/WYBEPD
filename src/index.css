@@ -101,6 +101,11 @@ body { background: #06101f; }
 .account-label { color:#9aacc5; font-size:11px; white-space:nowrap; }
 .account-profile,.account-logout { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:9px 11px; border:1px solid rgba(91,139,202,.28); border-radius:8px; color:#d5e4f7; font-size:12px; font-weight:600; transition:color .2s,border-color .2s,background .2s; }
 .account-profile svg { color:#6caeff; }.account-profile:hover,.account-profile.selected { border-color:#1680ff; background:#1680ff18; color:#68adff; }
+.account-profile { justify-content:flex-start; gap:10px; padding:7px 12px 7px 8px; text-align:left; }
+.account-avatar { display:grid; width:36px; height:36px; flex:0 0 36px; place-items:center; border:1px solid rgba(22,128,255,.35); border-radius:50%; background:linear-gradient(145deg,#123c70,#0b1b31); }
+.account-profile-copy { display:grid; gap:3px; min-width:0; }
+.account-profile-copy strong { max-width:190px; overflow:hidden; color:#f1f6ff; font-size:12px; font-weight:700; text-overflow:ellipsis; white-space:nowrap; }
+.account-profile-copy small { max-width:220px; overflow:hidden; color:#92a8c6; font-size:9px; text-overflow:ellipsis; white-space:nowrap; }
 .account-logout { padding:9px; color:#9aacc5; }.account-logout:hover { color:white; background:#172942; }
 @media(max-width:1100px) { .site-header-inner { gap:12px; padding-left:16px; padding-right:16px; }.site-brand { gap:9px; }.site-brand img { width:44px; height:44px; }.site-brand strong { font-size:19px; }.site-brand small { font-size:7px; letter-spacing:.2em; }.site-nav { gap:9px; }.site-nav button { gap:5px; font-size:11px; }.account-label { display:none; }.account-actions { gap:5px; } }
 @media(max-width:760px) { .site-header-inner { min-height:0; flex-wrap:wrap; row-gap:10px; padding-top:9px; padding-bottom:8px; }.site-brand { order:1; }.account-actions { order:2; margin-left:auto; }.site-nav { order:3; width:100%; margin-left:0; justify-content:flex-start; overflow-x:auto; gap:16px; padding:0 0 3px; scrollbar-width:thin; }.site-nav button { flex:0 0 auto; min-height:32px; font-size:11px; }.site-nav button.selected::after { bottom:0; }.site-brand strong { font-size:17px; }.site-brand small { font-size:7px; }.site-brand img { width:40px; height:40px; }.account-profile,.account-logout { padding:8px 9px; }.home-page { min-height:calc(100svh - 102px); }.home-hero { height:calc(100svh - 102px); min-height:0; } }
@@ -132,6 +137,8 @@ body { overflow-x:clip; }
   .site-brand { gap:7px; }
   .site-brand strong { font-size:15px; }
   .site-brand small { font-size:6px; letter-spacing:.08em; }
-  .account-profile span { display:none; }
-  .account-profile,.account-logout { width:36px; height:36px; padding:0; }
+  .account-profile-copy strong { max-width:110px; font-size:11px; }
+  .account-profile-copy small { max-width:120px; font-size:8px; }
+  .account-profile { padding:4px 6px; }
+  .account-logout { width:36px; height:36px; padding:0; }
 }
